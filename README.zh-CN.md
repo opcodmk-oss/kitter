@@ -40,16 +40,11 @@ Kitter 完全使用 Rust 和 GPUI 构建，界面简洁直观，体积小、资�
 
 Kitter 暂时没有 Apple Developer ID 签名。如果首次启动被 macOS 阻止，请确认应用来自官方 Release，再前往 **系统设置 → 隐私与安全 → 仍要打开**，按提示确认。详见 [Apple 官方指引](https://support.apple.com/zh-cn/102445)。
 
-<details>
-<summary>备用方式：通过终端打开</summary>
-
-对于从官方 Release 下载的应用，也可以执行以下命令，然后重新打开 Kitter：
+也可以执行以下命令，然后重新打开 Kitter：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Kitter.app
 ```
-
-</details>
 
 桌面应用和 CLI 共用同一套核心，但作为两个独立产物发布。GitHub Release 提供 macOS、Windows 和 Linux 的独立 CLI 包；内置 Kitter Skill 会查找这个独立 CLI，并在缺失时引导你下载。
 

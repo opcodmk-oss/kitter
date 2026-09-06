@@ -40,16 +40,11 @@ Download the app for your platform from [GitHub Releases](https://github.com/wha
 
 Kitter is not yet signed with an Apple Developer ID. If macOS blocks the first launch, confirm that you downloaded it from the official release, then go to **System Settings → Privacy & Security → Open Anyway** and follow the prompts. See [Apple’s instructions](https://support.apple.com/102445).
 
-<details>
-<summary>Alternative: open using Terminal</summary>
-
-For a copy downloaded from the official release, you can instead run the following command, then open Kitter again:
+You can also run the following command, then open Kitter again:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Kitter.app
 ```
-
-</details>
 
 The desktop app and CLI are separate release artifacts built on the same core. Standalone CLI packages for macOS, Windows, and Linux are available from [GitHub Releases](https://github.com/what1f/kitter/releases/latest). The built-in Kitter Skill resolves that standalone CLI and guides you through downloading it when needed.
 
