@@ -8,39 +8,48 @@
 
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-3f8997" alt="Apache-2.0 许可证"></a>
-  <img src="https://img.shields.io/badge/desktop-macOS-15191a" alt="macOS 桌面应用">
+  <img src="https://img.shields.io/badge/desktop-macOS%20%7C%20Windows%20%7C%20Linux-15191a" alt="macOS、Windows 和 Linux 桌面应用">
   <img src="https://img.shields.io/badge/built_with-Rust-b8aaa0" alt="使用 Rust 构建">
 </p>
 
 <p align="center"><strong>一套 Skill 仓库，让每个项目只获得自己需要的 Skill。</strong></p>
 
-安装 Skill 很容易，长期维护却很难。当你同时开发多个项目，同一个 Skill 会逐渐散落在不同目录中，形成多份副本，更新也开始彼此漂移。把所有 Skill 全部安装到全局同样不可行——每个项目需要的组合都不一样。
+Kitter 是一个管理 Agent Skill 的桌面应用和 CLI。将 Skill 集中在一套仓库中，为每个项目选择合适的组合，在一处统一更新。
 
-Kitter 为每个 Skill 保留一份长期维护的来源，再把它连接到真正需要它的项目。原生桌面应用和 CLI 共用同一套本地优先 Rust 核心：不需要账号，没有服务器，也不会在后台建立索引。
+Kitter 完全使用 Rust 和 GPUI 构建，界面简洁直观，体积小、资源占用低，操作流畅。
 
-## 为什么做 Kitter
+<p align="center">
+  <img src="./assets/readme/skill-workflow.png" width="100%" alt="Kitter 统一维护 Skill 仓库，按需链接到项目和用户全局">
+</p>
 
-Agent Skill 应该是你长期拥有的能力资产，而不是复制进每个项目后就失去来源的临时文件夹。
+## 为什么选择 Kitter
 
-Kitter 建立在三个默认原则上：
+同时维护多个项目时，同一个 Skill 往往会有多份副本，各个 Agent 实际能用哪些 Skill 也不容易掌握。Kitter 帮你理清这些关系：
 
-- **每个 Skill 只维护一份**——保留唯一可信来源，不再让多份副本各自漂移。
-- **项目优先**——框架、工作流和任务相关的 Skill 应该安装到真正使用它们的项目，而不是到处存在。
-- **少量全局**——只有几乎每个项目都需要的少数 Skill，才适合安装到用户级全局目录。
-
-这样，即使 Skill 越来越多，也可以从两个方向理解整个系统：打开一个 Skill，立即看到哪些项目正在使用它；打开一个项目，看到其中各个 Agent 实际能发现的全部 Skill——包括并非由 Kitter 托管的来源。
-
-Kitter 还会估算每个 Agent 自动载入的 Skill 元数据 token。上下文成本因此能更早暴露出来，方便发现过于宽泛的 Skill 组合、精简冗长的元数据、把低频能力改为手动调用，或清除重复能力，避免它们持续占用上下文。
+- **统一维护**——各个项目链接到同一份 Skill 来源，更新一次即可应用到所有关联安装。
+- **按项目选用**——每个项目拥有自己的 Skill 组合，通用的 Skill 也可以安装到用户级目录。
+- **查看实际生效内容**——了解每个 Agent 能发现的 Skill、来源及预计上下文开销，也能看到 Kitter 之外的安装。
 
 ## 安装 Kitter
 
-[下载最新 macOS 版本](https://github.com/what1f/kitter/releases/latest)，打开 DMG 后将 `Kitter.app` 拖入 `Applications`。
+从 [GitHub Releases](https://github.com/what1f/kitter/releases/latest) 下载适合你系统的桌面应用。
 
-Kitter 暂时没有 Apple Developer ID 签名。首次启动时，请先在 Finder 中 **按住 Control 点按 → 打开**。如果 macOS 仍然阻止运行，请确认应用来自 Kitter 官方 Release，再只移除它的隔离属性：
+- **macOS（Apple Silicon）**——打开 `.dmg`，将 `Kitter.app` 拖入 `Applications`。
+- **Windows（x64）**——下载 `Kitter-<version>-desktop-windows-x86_64.exe`，直接运行。
+- **Linux（x64）**——解压 `Kitter-<version>-desktop-linux-x86_64.tar.gz`，进入解压后的 `Kitter` 目录，运行 `./Kitter`。
+
+Kitter 暂时没有 Apple Developer ID 签名。如果首次启动被 macOS 阻止，请确认应用来自官方 Release，再前往 **系统设置 → 隐私与安全 → 仍要打开**，按提示确认。详见 [Apple 官方指引](https://support.apple.com/zh-cn/102445)。
+
+<details>
+<summary>备用方式：通过终端打开</summary>
+
+对于从官方 Release 下载的应用，也可以执行以下命令，然后重新打开 Kitter：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Kitter.app
 ```
+
+</details>
 
 桌面应用和 CLI 共用同一套核心，但作为两个独立产物发布。GitHub Release 提供 macOS、Windows 和 Linux 的独立 CLI 包；内置 Kitter Skill 会查找这个独立 CLI，并在缺失时引导你下载。
 
@@ -64,13 +73,13 @@ Kitter 为每个 Skill 保留一份长期维护的来源。打开它的 **安装
   <img src="./assets/readme/install-skill.zh-CN.png" width="100%" alt="Kitter 安装对话框，可选择目标项目和 Agent 安装位置">
 </p>
 
-只有当一个 Skill 几乎在每个项目中都长期有用时，才考虑用户级全局安装。如果插件已经提供相同能力，请先在项目视图确认实际状态，避免重复安装。
+各个项目都会用到的 Skill，也可以安装到用户级全局目录。
 
 ### 3. 验证实际生效内容
 
 打开 **项目**，可以看到每个 Agent 完整的生效 Skill 集合，而不只是 Kitter 托管的安装。Kitter 会发现项目级、上级目录、用户级、内置及插件提供的能力，并标明每一项来自哪里。
 
-每个 Agent 的 token 估算近似表示初始上下文中自动载入的 Skill 元数据。可以把它作为优化信号：找出过大的自动 Skill 集合、精简描述、将低频 Skill 改为手动调用，并移除重复能力。
+每个 Agent 的 token 估算可以帮助你发现不必要的 Skill 上下文开销。
 
 <p align="center">
   <img src="./assets/readme/project-effective-skills.zh-CN.png" width="100%" alt="Kitter 项目视图展示托管与非托管的实际生效 Skill、插件、Agent 和上下文开销估算">
@@ -112,8 +121,9 @@ cargo run --release --locked --features desktop --bin kitter-desktop
 
 ## 平台状态
 
-- **macOS**——提供桌面应用和独立 CLI。
-- **Windows 与 Linux**——现已提供独立 CLI，桌面应用即将支持。Kitter 使用 GPUI 的原生 Windows 和 Linux 后端，但桌面构建仍需在真实系统中完成验证。
+- **macOS（Apple Silicon）**——提供桌面应用和独立 CLI。
+- **Windows（x64）**——提供桌面应用和独立 CLI，已在 Windows 上测试，并针对启动和性能问题完成适配修复。
+- **Linux（x64）**——提供独立 CLI 和桌面构建，桌面应用仍需在真实系统中验证。
 
 ## 本地数据
 

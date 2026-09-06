@@ -2,7 +2,7 @@
 name = "kitter"
 version = "0.1.6"
 edition = "2024"
-description = "Native Agent Skill manager"
+description = "A simple, lightweight Skill manager built in Rust"
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/what1f/kitter"
