@@ -36,6 +36,22 @@ trap cleanup EXIT
 
 hdiutil attach -readonly -nobrowse -mountpoint "$mount_root" "$output_path" >/dev/null
 codesign --verify --deep --strict --verbose=2 "$mount_root/Kitter.app"
+uv run --no-project --with "dmgbuild==1.6.7" python - "$mount_root" "$settings_path" <<'PYTHON'
+import pathlib
+import runpy
+import sys
+from ds_store import DSStore
+
+root = pathlib.Path(sys.argv[1])
+settings = runpy.run_path(sys.argv[2], init_globals={"defines": {"app": "", "background": ""}})
+with DSStore.open(str(root / ".DS_Store"), "r") as store:
+    for name, expected in settings["icon_locations"].items():
+        if (root / name).exists():
+            actual = store[name]["Iloc"]
+            if tuple(actual) != expected:
+                raise SystemExit(f"Unexpected installer icon position for {name}: {actual}")
+print("Installer icon positions verified")
+PYTHON
 hdiutil detach "$mount_root" >/dev/null
 rmdir "$mount_root"
 trap - EXIT

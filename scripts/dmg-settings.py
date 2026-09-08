@@ -29,6 +29,11 @@ icon_size = 128
 icon_locations = {
     "Kitter.app": (250, 233),
     "Applications": (585, 233),
+    # Finder can reveal hidden files. Keep support files outside the installer viewport.
+    ".background.tiff": (1600, 1200),
+    ".background.png": (1760, 1200),
+    ".DS_Store": (1920, 1200),
+    ".VolumeIcon.icns": (2080, 1200),
 }
 
 hide = [".background.tiff"]
