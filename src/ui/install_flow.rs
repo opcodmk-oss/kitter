@@ -13,7 +13,7 @@ impl KitterApp {
         let selected_count = selected_keys.len();
         let selected_label = if selected_count > 1 {
             if self.uses_english() {
-                format!("{} Skills", selected_count)
+                counted(selected_count, "skill", "skills")
             } else {
                 format!("{} 个技能", selected_count)
             }
@@ -528,7 +528,7 @@ impl KitterApp {
                             format!("删除「{label}」？")
                         }
                     } else if self.uses_english() {
-                        format!("Delete {} Skills?", labels.len())
+                        format!("Delete {} skills?", labels.len())
                     } else {
                         format!("删除 {} 个技能？", labels.len())
                     },
@@ -538,7 +538,7 @@ impl KitterApp {
                         self.tr("托管副本与安装将被删除；链接来源的原始目录保留。", "Managed copies and installations will be removed. Linked source folders are kept.")
                     } else { self.tr(
                         "这会从 Kitter 中删除这些技能，同时移除它们在项目中的安装。以下位置的文件也会被删除，且无法恢复：",
-                        "This removes these Skills from Kitter and from projects where they are installed. Files at these locations will also be deleted and cannot be restored:",
+                        "This removes these skills from Kitter and from projects where they are installed. Files at these locations will also be deleted and cannot be restored:",
                     ) })
                     .to_string(),
                     Some(
@@ -582,24 +582,24 @@ impl KitterApp {
                     if global_scope {
                         self.tr(
                             "只会移除选中的用户级安装，原始技能文件不会受到影响。",
-                            "Only the selected user-level installations will be removed. The original Skill files will not be affected.",
+                            "Only the selected user-level installations will be removed. The original skill files will not be affected.",
                         )
                     } else {
                         self.tr(
                             "只会移除这个项目中的安装，原始技能文件不会受到影响。",
-                            "Only the project installations will be removed. The original Skill files will not be affected.",
+                            "Only the project installations will be removed. The original skill files will not be affected.",
                         )
                     }
                 } else {
                     if global_scope {
                         self.tr(
                             "只会移除选中的用户级安装。Kitter 中保存的技能不会被删除，你之后仍可以再次安装。",
-                            "Only the selected user-level installations will be removed. The Skill saved in Kitter will remain available to install again.",
+                            "Only the selected user-level installations will be removed. The skill saved in Kitter will remain available to install again.",
                         )
                     } else {
                         self.tr(
                             "只会移除这个项目中的安装。Kitter 中保存的技能不会被删除，你之后仍可以再次安装。",
-                            "Only the project installations will be removed. The Skill saved in Kitter will remain available to install again.",
+                            "Only the project installations will be removed. The skill saved in Kitter will remain available to install again.",
                         )
                     }
                 };
@@ -861,8 +861,8 @@ impl KitterApp {
                                             } else if report.removed > 0 {
                                                 if this.uses_english() {
                                                     format!(
-                                                        "Removed {} location(s); {} could not be removed",
-                                                        report.removed,
+                                                        "Removed {}; {} could not be removed",
+                                                        counted(report.removed, "location", "locations"),
                                                         report.failures.len()
                                                     )
                                                 } else {
@@ -874,8 +874,8 @@ impl KitterApp {
                                                 }
                                             } else if this.uses_english() {
                                                 format!(
-                                                    "{} location(s) could not be removed. Check access and try again",
-                                                    report.failures.len()
+                                                    "{} could not be removed. Check access and try again",
+                                                    counted(report.failures.len(), "location", "locations")
                                                 )
                                             } else {
                                                 format!(

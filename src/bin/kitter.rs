@@ -1,3 +1,4 @@
+use kitter::text::counted;
 use std::{
     collections::{BTreeMap, BTreeSet, HashSet},
     path::{Path, PathBuf},
@@ -28,30 +29,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// List Skills saved in Kitter
+    /// List skills saved in Kitter
     List {
-        /// Only show Skills carrying this tag
+        /// Only show skills carrying this tag
         #[arg(long)]
         tag: Option<String>,
         #[arg(long)]
         json: bool,
     },
-    /// Show one Skill by name or ID
+    /// Show one skill by name or ID
     Show {
         skill: String,
         #[arg(long)]
         json: bool,
     },
-    /// List files in one Skill
+    /// List files in one skill
     Files { skill: String },
-    /// Read one file from a Skill
+    /// Read one file from a skill
     Read { skill: String, path: PathBuf },
-    /// Add Skills from a source
+    /// Add skills from a source
     Add {
         #[command(subcommand)]
         source: AddSource,
     },
-    /// Scan and adopt existing Agent Skill installations
+    /// Scan and adopt existing agent skill installations
     Adopt {
         /// Folders to scan; defaults to the home folder
         roots: Vec<PathBuf>,
@@ -64,12 +65,12 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Remove one or more Skills from Kitter and their managed installations
+    /// Remove one or more skills from Kitter and their managed installations
     Remove {
         #[arg(required = true)]
         skills: Vec<String>,
     },
-    /// Install one or more Skills into a project
+    /// Install one or more skills into a project
     Install {
         #[arg(required = true)]
         skills: Vec<String>,
@@ -78,7 +79,7 @@ enum Command {
         #[arg(long, value_enum, required = true)]
         target: Vec<TargetArg>,
     },
-    /// Remove selected Skill installations from a project
+    /// Remove selected skill installations from a project
     Uninstall {
         skills: Vec<String>,
         /// Remove these exact installation paths
@@ -89,47 +90,47 @@ enum Command {
         /// Limit removal to these targets; defaults to every installed target
         #[arg(long, value_enum)]
         target: Vec<TargetArg>,
-        /// Also remove external links or directly stored Skill folders
+        /// Also remove external links or directly stored skill folders
         #[arg(long)]
         include_unmanaged: bool,
     },
-    /// Inspect direct and effective Skills for a project
+    /// Inspect direct and effective skills for a project
     Project {
         path: PathBuf,
-        /// Limit effective discovery to one Agent
+        /// Limit effective discovery to one agent
         #[arg(long, value_enum)]
         agent: Option<AgentArg>,
-        /// Select filesystem Skills, plugin Skills, or both
+        /// Select filesystem skills, plugin skills, or both
         #[arg(long, value_enum, default_value_t = ProjectViewArg::All)]
         view: ProjectViewArg,
         #[arg(long)]
         json: bool,
     },
-    /// Update selected Skills using their recorded sources
+    /// Update selected skills using their recorded sources
     Update {
         skills: Vec<String>,
-        /// Update every Skill with a managed source
+        /// Update every skill with a managed source
         #[arg(long, conflicts_with = "skills")]
         all: bool,
     },
-    /// Check every Skill for updates
+    /// Check every skill for updates
     Check {
         #[arg(long)]
         json: bool,
     },
-    /// Manage Skill groups
+    /// Manage skill groups
     Group {
         #[command(subcommand)]
         action: GroupAction,
     },
-    /// Manage Skill tags
+    /// Manage skill tags
     Tag {
         #[command(subcommand)]
         action: TagAction,
     },
-    /// Show or change where Kitter stores Skills
+    /// Show or change where Kitter stores skills
     Library {
-        /// Change the Skill library folder
+        /// Change the skill library folder
         #[arg(long, value_name = "PATH")]
         set: Option<PathBuf>,
     },
@@ -137,28 +138,28 @@ enum Command {
 
 #[derive(Subcommand)]
 enum AddSource {
-    /// Recursively discover Skills below a local folder
+    /// Recursively discover skills below a local folder
     Local {
         path: PathBuf,
-        /// Import only these discovered Skill names; defaults to all
+        /// Import only these discovered skill names; defaults to all
         #[arg(long = "skill")]
         skills: Vec<String>,
         #[arg(long)]
         group: Option<String>,
     },
-    /// Discover Skills from a skills.sh or GitHub source
+    /// Discover skills from a skills.sh or GitHub source
     Npx {
         repository: String,
-        /// Import only these discovered Skill names; defaults to all
+        /// Import only these discovered skill names; defaults to all
         #[arg(long = "skill")]
         skills: Vec<String>,
         #[arg(long)]
         group: Option<String>,
     },
-    /// Discover Skills from a Claude plugin
+    /// Discover skills from a Claude plugin
     Claude {
         plugin: String,
-        /// Import only these discovered Skill names; defaults to all
+        /// Import only these discovered skill names; defaults to all
         #[arg(long = "skill")]
         skills: Vec<String>,
         #[arg(long)]
@@ -168,7 +169,7 @@ enum AddSource {
 
 #[derive(Subcommand)]
 enum GroupAction {
-    /// List groups and their Skill counts
+    /// List groups and their skill counts
     List {
         #[arg(long)]
         json: bool,
@@ -180,17 +181,17 @@ enum GroupAction {
     /// Delete a group
     Delete {
         group: String,
-        /// Delete Skills in the group instead of leaving them ungrouped
+        /// Delete skills in the group instead of leaving them ungrouped
         #[arg(long)]
         delete_skills: bool,
     },
-    /// Move Skills into a group
+    /// Move skills into a group
     Assign {
         group: String,
         #[arg(required = true)]
         skills: Vec<String>,
     },
-    /// Remove Skills from their groups
+    /// Remove skills from their groups
     Clear {
         #[arg(required = true)]
         skills: Vec<String>,
@@ -222,14 +223,14 @@ enum TagAction {
         /// Tag name or ID
         tag: String,
     },
-    /// Assign a tag to one or more Skills
+    /// Assign a tag to one or more skills
     Assign {
         /// Tag name or ID
         tag: String,
         #[arg(required = true)]
         items: Vec<String>,
     },
-    /// Remove a tag from one or more Skills
+    /// Remove a tag from one or more skills
     Unassign {
         /// Tag name or ID
         tag: String,
@@ -446,7 +447,7 @@ fn run() -> Result<()> {
             if json {
                 println!("{{\"updates\":{count}}}");
             } else {
-                println!("{count} Skill(s) can be updated");
+                println!("{} can be updated", counted(count, "skill", "skills"));
             }
             Ok(())
         }
@@ -479,7 +480,7 @@ fn list_skills(library: &SkillLibrary, tag: Option<&str>, json: bool) -> Result<
     if json {
         println!("{}", serde_json::to_string_pretty(&skills)?);
     } else if skills.is_empty() {
-        println!("No Skills found");
+        println!("No skills found");
     } else {
         for skill in skills {
             let group = skill
@@ -620,8 +621,9 @@ fn add_skills(library: &mut SkillLibrary, add: AddSource) -> Result<()> {
     };
     let summary = scan.import_selected(library, &selected, group.as_deref())?;
     println!(
-        "Added {} Skill(s), skipped {} already-added Skill(s)",
-        summary.added, summary.skipped
+        "Added {}, skipped {} already added",
+        counted(summary.added, "skill", "skills"),
+        counted(summary.skipped, "skill", "skills")
     );
     Ok(())
 }
@@ -666,7 +668,7 @@ fn adopt_skills(
         if json {
             println!("{}", serde_json::to_string_pretty(&output)?);
         } else if output.is_empty() {
-            println!("No existing Skill installations found");
+            println!("No existing skill installations found");
         } else {
             for candidate in output {
                 let status = if candidate.issue.is_some() {
@@ -708,7 +710,7 @@ fn adopt_skills(
         scan.select(&mut selected, &candidate.id);
     }
     if selected.is_empty() {
-        bail!("没有可托管的 Skill；冲突来源需要使用 --source 明确选择");
+        bail!("没有可托管的 skill；冲突来源需要使用 --source 明确选择");
     }
 
     let mut adopted = 0usize;
@@ -727,7 +729,7 @@ fn adopt_skills(
             Err(error) => failures.push(format!("{}：{error:#}", candidate.name)),
         }
     }
-    finish_batch("Adopted", "Skill", adopted, failures)
+    finish_batch("Adopted", "skill", adopted, failures)
 }
 
 fn remove_skills(library: &mut SkillLibrary, selectors: &[String]) -> Result<()> {
@@ -740,7 +742,7 @@ fn remove_skills(library: &mut SkillLibrary, selectors: &[String]) -> Result<()>
             Err(error) => failures.push(format!("{}：{error:#}", skill.record.name)),
         }
     }
-    finish_batch("Removed", "Skill", removed, failures)
+    finish_batch("Removed", "skill", removed, failures)
 }
 
 fn install_skills(
@@ -760,7 +762,7 @@ fn install_skills(
             Err(error) => failures.push(format!("{}：{error:#}", skill.record.name)),
         }
     }
-    finish_batch("Installed", "Skill", installed, failures)
+    finish_batch("Installed", "skill", installed, failures)
 }
 
 fn uninstall_skills(
@@ -772,7 +774,7 @@ fn uninstall_skills(
     include_unmanaged: bool,
 ) -> Result<()> {
     if selectors.is_empty() && paths.is_empty() {
-        bail!("请指定至少一个 Skill 或 --path 安装位置");
+        bail!("请指定至少一个 skill 或 --path 安装位置");
     }
     let project_path = canonical_project(project_path)?;
     let installed = project::list(&project_path, &library.config.library_dir)?;
@@ -801,7 +803,7 @@ fn uninstall_skills(
     for selector in selectors {
         let library_matches = matching_library_skills(&library_skills, selector);
         if library_matches.len() > 1 {
-            bail!("存在多个名为 {selector} 的 Skill，请使用 list 中的 ID");
+            bail!("存在多个名为 {selector} 的 skill，请使用 list 中的 ID");
         }
         let matching = installed
             .iter()
@@ -908,7 +910,7 @@ fn inspect_project(
             .iter()
             .flat_map(|estimate| estimate.skills.iter().map(|skill| (estimate.agent, skill))),
     );
-    println!("Effective Skills: {}", effective.len());
+    println!("Effective skills: {}", effective.len());
     for group in effective {
         let agents = group
             .entries()
@@ -932,7 +934,7 @@ fn inspect_project(
 
 fn update_skills(library: &mut SkillLibrary, selectors: &[String], all: bool) -> Result<()> {
     if selectors.is_empty() && !all {
-        bail!("请指定至少一个 Skill，或使用 --all");
+        bail!("请指定至少一个 skill，或使用 --all");
     }
     let skills = if all {
         library.list()?
@@ -947,7 +949,7 @@ fn update_skills(library: &mut SkillLibrary, selectors: &[String], all: bool) ->
             Err(error) => failures.push(format!("{}：{error:#}", skill.record.name)),
         }
     }
-    finish_batch("Updated", "Skill", updated, failures)
+    finish_batch("Updated", "skill", updated, failures)
 }
 
 fn manage_groups(library: &mut SkillLibrary, action: GroupAction) -> Result<()> {
@@ -972,7 +974,11 @@ fn manage_groups(library: &mut SkillLibrary, action: GroupAction) -> Result<()> 
                 println!("No groups");
             } else {
                 for group in groups {
-                    println!("{:<28} {} Skill(s)", group.name, group.skills);
+                    println!(
+                        "{:<28} {}",
+                        group.name,
+                        counted(group.skills, "skill", "skills")
+                    );
                 }
             }
             Ok(())
@@ -1053,8 +1059,9 @@ fn manage_tags(library: &SkillLibrary, action: TagAction) -> Result<()> {
                         String::new()
                     };
                     println!(
-                        "{indent}#{:<26} {} assignment(s){id}",
-                        tag.name, tag.assignments
+                        "{indent}#{:<26} {}{id}",
+                        tag.name,
+                        counted(tag.assignments, "assignment", "assignments")
                     );
                 }
             }
@@ -1198,16 +1205,16 @@ fn same_file(left: &Path, right: &Path) -> bool {
 
 fn finish_batch(action: &str, item: &str, succeeded: usize, failures: Vec<String>) -> Result<()> {
     if failures.is_empty() {
-        println!("{action} {succeeded} {item}(s)");
+        println!("{action} {}", counted(succeeded, item, &format!("{item}s")));
         return Ok(());
     }
     if succeeded > 0 {
-        eprintln!("{action} {succeeded} {item}(s)");
+        eprintln!("{action} {}", counted(succeeded, item, &format!("{item}s")));
     }
     bail!(
-        "{} operation(s) failed：{}",
-        failures.len(),
-        failures.join("；")
+        "{} failed: {}",
+        counted(failures.len(), "operation", "operations"),
+        failures.join("; ")
     )
 }
 
@@ -1271,7 +1278,7 @@ mod tests {
             action: TagAction::Assign { items, .. },
         } = cli.command
         else {
-            panic!("expected Skill tag assignment");
+            panic!("expected skill tag assignment");
         };
         assert_eq!(items.len(), 2);
     }
@@ -1280,7 +1287,7 @@ mod tests {
     fn client_settings_are_not_cli_commands() {
         assert!(Cli::try_parse_from(["kitter", "config", "set-theme", "dark"]).is_err());
         let cli = Cli::try_parse_from(["kitter", "library", "--set", "/tmp/skills"])
-            .expect("Skill library location should remain configurable");
+            .expect("skill library location should remain configurable");
         let Command::Library { set } = cli.command else {
             panic!("expected library command");
         };

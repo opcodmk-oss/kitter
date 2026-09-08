@@ -97,3 +97,19 @@ impl RenderOnce for Spinner {
 pub fn spin(icon: Svg) -> AnyElement {
     Spinner { icon }.into_any_element()
 }
+
+/// Reuses the loader clock and honors the platform's reduced-motion preference.
+pub fn progress_phase(window: &Window, cx: &mut App) -> f32 {
+    if cx.reduce_motion() {
+        return 0.5;
+    }
+    let phase = (cx
+        .default_global::<AnimationClock>()
+        .epoch
+        .elapsed()
+        .as_secs_f32()
+        / 1.4)
+        .fract();
+    lease(window.current_view(), cx);
+    phase
+}

@@ -20,17 +20,9 @@ pub struct ScannedSkill {
 }
 
 enum ScanOrigin {
-    Npx {
-        repository: String,
-        workspace: PathBuf,
-    },
-    Claude {
-        plugin: String,
-    },
-    Local {
-        root: PathBuf,
-        label: String,
-    },
+    Npx { repository: String },
+    Claude { plugin: String },
+    Local { root: PathBuf, label: String },
 }
 
 pub struct SkillScan {
@@ -108,6 +100,18 @@ impl SkillScan {
             .iter()
             .map(|skill| skill.name.clone())
             .collect::<Vec<_>>();
+        // The scan already downloaded a complete snapshot. Import from that
+        // snapshot only; update workspaces are prepared lazily by update flows.
+        let mut scan_hashes = if matches!(origin, ScanOrigin::Npx { .. }) {
+            npx_lock_hashes(
+                scan_temp
+                    .as_ref()
+                    .context("Npx 扫描结果不可用，请重新扫描")?
+                    .path(),
+            )?
+        } else {
+            HashMap::new()
+        };
         let mut added_skills = Vec::new();
         let mut skipped = 0;
         let group_name = group_name
@@ -141,28 +145,14 @@ impl SkillScan {
                 continue;
             }
             let (source_path, skill_origin) = match &origin {
-                ScanOrigin::Npx {
-                    repository,
-                    workspace,
-                } => {
-                    // Keep a reusable upstream workspace, but only ask the
-                    // upstream CLI for Skills that are not already present.
-                    // Re-running `--skill *` can abort on its own duplicates
-                    // before Kitter gets a chance to skip them.
-                    ensure_npx_skill(workspace, repository, &skill.name)?;
-                    let scan_workspace = scan_temp
-                        .as_ref()
-                        .map(TempDir::path)
-                        .context("Npx 扫描结果不可用，请重新扫描")?;
-                    (
-                        skill.path.clone(),
-                        SkillOrigin::Npx {
-                            repository: repository.clone(),
-                            skill: skill.name.clone(),
-                            source_hash: npx_lock_hash(scan_workspace, &skill.name)?,
-                        },
-                    )
-                }
+                ScanOrigin::Npx { repository } => (
+                    skill.path.clone(),
+                    SkillOrigin::Npx {
+                        repository: repository.clone(),
+                        skill: skill.name.clone(),
+                        source_hash: scan_hashes.remove(&skill.name),
+                    },
+                ),
                 ScanOrigin::Claude { plugin } => (
                     skill.path.clone(),
                     SkillOrigin::ClaudeMarketplace {
@@ -268,7 +258,6 @@ pub fn scan_local(root: &Path) -> Result<SkillScan> {
 
 pub fn scan_npx(input: &str) -> Result<SkillScan> {
     let repository = normalize_npx_source(input)?;
-    let workspace = npx_workspace(&repository);
     let temp = TempDir::new()?;
     npx_add(temp.path(), &repository, "*")?;
     let root = temp.path().join(".agents/skills");
@@ -298,10 +287,7 @@ pub fn scan_npx(input: &str) -> Result<SkillScan> {
     }
     skills.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(SkillScan {
-        origin: ScanOrigin::Npx {
-            repository,
-            workspace,
-        },
+        origin: ScanOrigin::Npx { repository },
         skills,
         _temp: Some(temp),
     })
@@ -840,6 +826,119 @@ mod tests {
         .unwrap();
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn npx_scan_is_the_only_download_even_after_partial_import_and_deletion() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let bin = temp.path().join("bin");
+        fs::create_dir(&bin).unwrap();
+        let snapshot = temp.path().join("snapshot");
+        for index in 1..=33 {
+            let name = format!("skill-{index:02}");
+            write_skill(&snapshot.join(".agents/skills").join(&name), &name);
+        }
+        let entries = (1..=33)
+            .map(|index| {
+                (
+                    format!("skill-{index:02}"),
+                    serde_json::json!({"computedHash": format!("hash-{index}")}),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        fs::write(
+            snapshot.join("skills-lock.json"),
+            serde_json::to_vec(&serde_json::json!({"skills": entries})).unwrap(),
+        )
+        .unwrap();
+        let stub = bin.join("npx");
+        fs::write(
+            &stub,
+            r#"#!/bin/sh
+printf 'call\n' >> "$KITTER_IMPORT_FIXTURE/calls"
+[ "$6" = '*' ] || exit 91
+/bin/cp -R "$KITTER_IMPORT_FIXTURE/snapshot/." .
+"#,
+        )
+        .unwrap();
+        fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
+        // Run in a child so PATH and the application data directory cannot
+        // interfere with parallel tests or the user's installation.
+        let output = Command::new(env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "source::tests::npx_import_fixture_child",
+                "--nocapture",
+            ])
+            .env("KITTER_IMPORT_FIXTURE", temp.path())
+            .env("KITTER_HOME", temp.path().join("data"))
+            .env("PATH", &bin)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            fs::read_to_string(temp.path().join("calls"))
+                .unwrap()
+                .lines()
+                .count(),
+            2,
+            "exactly one download per scan, none during import"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn npx_import_fixture_child() {
+        let Some(root) = env::var_os("KITTER_IMPORT_FIXTURE").map(PathBuf::from) else {
+            return;
+        };
+        let repository = "https://github.com/fixture/import-test";
+        let mut scan = scan_npx(repository).unwrap();
+        let selected = scan
+            .skills()
+            .iter()
+            .map(|s| s.name.clone())
+            .collect::<HashSet<_>>();
+        // A failed eighteenth item leaves the same 17 persisted skills as an
+        // interrupted import, without killing a worker or touching real data.
+        fs::remove_dir_all(&scan.skills[17].path).unwrap();
+        let mut library = SkillLibrary::open_in(root.join("data")).unwrap();
+        assert!(
+            scan.import_selected(&mut library, &selected, Some("fixture"))
+                .is_err()
+        );
+        assert_eq!(library.list().unwrap().len(), 18); // 17 imported + built-in.
+        let group = library
+            .groups()
+            .into_iter()
+            .find(|g| g.name == "fixture")
+            .unwrap();
+        assert_eq!(library.delete_group(&group.id, true).unwrap().len(), 17);
+        assert_eq!(library.list().unwrap().len(), 1); // Built-in skill only.
+        scan = scan_npx(repository).unwrap();
+        let started = std::time::Instant::now();
+        let summary = scan
+            .import_selected(&mut library, &selected, Some("fixture"))
+            .unwrap();
+        eprintln!("33-skill local import: {:?}", started.elapsed());
+        assert_eq!(
+            summary,
+            ImportSummary {
+                added: 33,
+                skipped: 0
+            }
+        );
+        assert!(
+            matches!(library.record("skill-18").unwrap().origin, SkillOrigin::Npx { source_hash: Some(hash), .. } if hash == "hash-18")
+        );
+        assert!(!root.join("data/npx-sources").exists());
+    }
+
     #[test]
     fn local_batch_skips_existing_identity_and_imports_the_rest() {
         let temp = tempfile::tempdir().unwrap();
@@ -910,7 +1009,7 @@ mod tests {
     }
 
     #[test]
-    fn npx_import_uses_the_fresh_scan_instead_of_a_stale_workspace() {
+    fn npx_import_preserves_the_scan_content_and_lock_hash() {
         let temp = tempfile::tempdir().unwrap();
         let scan_temp = tempfile::tempdir().unwrap();
         let scanned_skill = scan_temp.path().join(".agents/skills/alpha");
@@ -927,20 +1026,9 @@ mod tests {
         )
         .unwrap();
 
-        let workspace = temp.path().join("npx-workspace");
-        let cached_skill = npx_skill_path(&workspace, "alpha");
-        fs::create_dir_all(workspace.join(".agents")).unwrap();
-        write_skill(&cached_skill, "alpha");
-        fs::write(
-            workspace.join(".agents/.skill-lock.json"),
-            r#"{"skills":{}}"#,
-        )
-        .unwrap();
-
         let scan = SkillScan {
             origin: ScanOrigin::Npx {
                 repository: "owner/repository".into(),
-                workspace,
             },
             skills: vec![ScannedSkill {
                 name: "alpha".into(),

@@ -34,7 +34,7 @@ Kitter 完全使用 Rust 和 GPUI 构建，界面简洁直观，体积小、资�
 
 从 [GitHub Releases](https://github.com/what1f/kitter/releases/latest) 下载适合你系统的桌面应用。
 
-- **macOS（Apple Silicon）**——打开 `.dmg`，将 `Kitter.app` 拖入 `Applications`。
+- **macOS（Apple Silicon / Intel）**——Apple Silicon 选择 `macos-arm64.dmg`，Intel 选择 `macos-x86_64.dmg`，打开后将 `Kitter.app` 拖入 `Applications`。
 - **Windows（x64）**——下载 `Kitter-<version>-desktop-windows-x86_64.exe`，直接运行。
 - **Linux（x64）**——解压 `Kitter-<version>-desktop-linux-x86_64.tar.gz`，进入解压后的 `Kitter` 目录，运行 `./Kitter`。
 
@@ -116,7 +116,7 @@ cargo run --release --locked --features desktop --bin kitter-desktop
 
 ## 平台状态
 
-- **macOS（Apple Silicon）**——提供桌面应用和独立 CLI。
+- **macOS（Apple Silicon / Intel）**——提供桌面应用和独立 CLI。
 - **Windows（x64）**——提供桌面应用和独立 CLI，已在 Windows 上测试，并针对启动和性能问题完成适配修复。
 - **Linux（x64）**——提供独立 CLI 和桌面构建，桌面应用仍需在真实系统中验证。
 

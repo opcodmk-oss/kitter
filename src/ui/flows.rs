@@ -2,6 +2,10 @@ use super::*;
 
 impl KitterApp {
     pub(super) fn open_add_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.add_flow.task.is_some() {
+            return;
+        }
+        self.groups_flow.edit = None;
         self.add_flow.task = None;
         self.add_flow.scan = None;
         self.add_flow.adoption_scan = None;
@@ -41,6 +45,9 @@ impl KitterApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.add_flow.task.is_some() {
+            return;
+        }
         if let Some(cancel) = self.add_flow.adoption_cancel.take() {
             cancel.store(true, Ordering::Relaxed);
         }
@@ -69,6 +76,8 @@ impl KitterApp {
             input.set_value("", window, cx);
             input.set_placeholder(placeholder, window, cx);
         });
+        self.groups_flow.edit = None;
+        self.tags_flow.error = None;
         self.add_flow.scan = None;
         self.add_flow.selected.clear();
         self.add_flow.error = None;
@@ -112,18 +121,18 @@ impl KitterApp {
                 let message = match result {
                     Ok((library, 0)) => {
                         this.model.library = library;
-                        this.tr("所有技能都是最新版本", "All Skills are up to date")
+                        this.tr("所有技能都是最新版本", "All skills are up to date")
                             .to_string()
                     }
                     Ok((library, count)) => {
                         this.model.library = library;
                         if this.uses_english() {
-                            format!("{count} Skill(s) can be updated")
+                            format!("{} can be updated", counted(count, "skill", "skills"))
                         } else {
                             format!("发现 {count} 个可更新的技能")
                         }
                     }
-                    Err(error) => error.to_string(),
+                    Err(error) => this.error_message(error),
                 };
                 this.show_notice(message, cx);
                 this.refresh(cx);
@@ -155,7 +164,7 @@ impl KitterApp {
                         this.model.library = library;
                         this.tr("技能已更新", "Skill updated").to_string()
                     }
-                    Err(error) => error.to_string(),
+                    Err(error) => this.error_message(error),
                 };
                 this.show_notice(message, cx);
                 this.refresh(cx);
@@ -171,6 +180,12 @@ impl KitterApp {
         }
         if self.add_flow.task.is_some() || self.add_flow.selected.is_empty() {
             return;
+        }
+        if self.groups_flow.edit == Some(GroupEdit::Create) {
+            self.commit_group_edit(cx);
+            if self.groups_flow.edit.is_some() {
+                return;
+            }
         }
         let Some(scan) = self.add_flow.scan.take() else {
             return;
@@ -203,11 +218,16 @@ impl KitterApp {
                         let message = if this.uses_english() {
                             match (summary.added, summary.skipped) {
                                 (0, skipped) => {
-                                    format!("No new Skills added · {skipped} already added")
+                                    format!("No new skills added · {skipped} already added")
                                 }
-                                (added, 0) => format!("Added {added} Skill(s)"),
+                                (added, 0) => {
+                                    format!("Added {}", counted(added, "skill", "skills"))
+                                }
                                 (added, skipped) => {
-                                    format!("Added {added} Skill(s) · {skipped} already added")
+                                    format!(
+                                        "Added {} · {skipped} already added",
+                                        counted(added, "skill", "skills")
+                                    )
                                 }
                             }
                         } else {
@@ -225,7 +245,7 @@ impl KitterApp {
                         this.refresh(cx);
                     }
                     Err(error) => {
-                        this.add_flow.error = Some(error.to_string());
+                        this.add_flow.error = Some(this.error_message(error));
                         this.notify_dialog(cx);
                     }
                 }

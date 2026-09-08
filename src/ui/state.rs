@@ -15,9 +15,9 @@ use crate::{
 
 use super::{
     AddKind, AddTask, ContentSnapshot, ContextEstimateCache, DeleteConfirmation, DialogBody,
-    GroupEdit, Page, PageBody, ProjectChoice, ProjectSkillsTab, SourceChoice, SpinnerView,
-    TagAssignmentTarget, TagDropTarget, TagEdit, TagId, TagScope, adoption_list,
-    effective_skills::AgentKind, skill_selection::SkillSelection,
+    GroupDragScope, GroupEdit, Page, PageBody, ProjectChoice, ProjectSkillsTab, SourceChoice,
+    SpinnerView, TagAssignmentTarget, TagDropPosition, TagDropTarget, TagEdit, TagId, TagScope,
+    adoption_list, effective_skills::AgentKind, skill_selection::SkillSelection,
 };
 
 pub(super) struct AppModel {
@@ -118,6 +118,7 @@ pub(super) struct TagsFlowState {
 }
 
 pub(super) struct GroupsFlowState {
+    pub drop_target: Option<(GroupDragScope, String, TagDropPosition)>,
     pub name_input: Entity<InputState>,
     pub edit: Option<GroupEdit>,
     pub delete_pending: Option<String>,

@@ -1,6 +1,134 @@
 use super::*;
 
 impl KitterApp {
+    pub(super) fn sortable_group_row(
+        &self,
+        row: Stateful<Div>,
+        id: String,
+        name: String,
+        scope: GroupDragScope,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        let p = self.palette();
+        let key: SharedString = format!("sortable-group-{scope:?}-{id}").into();
+        let target_id = id.clone();
+        let drop_id = id.clone();
+        let position = self
+            .groups_flow
+            .drop_target
+            .as_ref()
+            .filter(|(origin, target, _)| *origin == scope && target == &id && cx.has_active_drag())
+            .map(|(_, _, position)| *position);
+        let dots = || {
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(2.))
+                .children((0..3).map(|_| div().size(px(3.)).rounded_full().bg(p.muted)))
+        };
+        let row_selector = format!("sort-group-{id}");
+        let drag = GroupDrag {
+            scope,
+            id: id.clone(),
+            name,
+            background: p.elevated,
+            foreground: p.text,
+        };
+        let row = if scope == GroupDragScope::Management {
+            let handle = div()
+                .id(ElementId::Name(format!("drag-group-{id}").into()))
+                .debug_selector(|| format!("drag-group-{id}"))
+                .absolute()
+                .left_0()
+                .top(px(5.))
+                .w(px(24.))
+                .h(px(24.))
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor(CursorStyle::OpenHand)
+                .opacity(0.)
+                .tab_index(0)
+                .focus_visible(|handle| handle.opacity(1.))
+                .group_hover(key.clone(), |handle| handle.opacity(1.))
+                .child(div().flex().gap(px(2.)).child(dots()).child(dots()))
+                .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                .on_click(|_, _, cx| cx.stop_propagation())
+                .on_drag(drag, |drag, _, _, cx| cx.new(|_| drag.clone()));
+            row.ml(px(-24.)).pl(px(24.)).child(handle)
+        } else {
+            row.on_drag(drag, |drag, _, _, cx| cx.new(|_| drag.clone()))
+        };
+        row.debug_selector(|| row_selector)
+            .group(key)
+            .relative()
+            .on_drag_move(
+                cx.listener(move |this, event: &DragMoveEvent<GroupDrag>, _, cx| {
+                    if event.drag(cx).scope != scope {
+                        return;
+                    }
+                    let position = (event.bounds.contains(&event.event.position)
+                        && event.drag(cx).id != target_id)
+                        .then(|| {
+                            if event.event.position.y < event.bounds.center().y {
+                                TagDropPosition::Before
+                            } else {
+                                TagDropPosition::After
+                            }
+                        });
+                    let next = position.map(|position| (scope, target_id.clone(), position));
+                    if next.is_some()
+                        || this
+                            .groups_flow
+                            .drop_target
+                            .as_ref()
+                            .is_some_and(|(origin, id, _)| *origin == scope && id == &target_id)
+                    {
+                        if this.groups_flow.drop_target != next {
+                            this.groups_flow.drop_target = next;
+                            this.notify_dialog(cx);
+                            cx.notify();
+                        }
+                    }
+                }),
+            )
+            .on_drop(cx.listener(move |this, drag: &GroupDrag, _, cx| {
+                if drag.scope != scope {
+                    return;
+                }
+                if let Some((_, id, position)) = this
+                    .groups_flow
+                    .drop_target
+                    .take()
+                    .filter(|(origin, id, _)| *origin == scope && id == &drop_id)
+                {
+                    if let Err(error) = this.model.library.move_group(
+                        &drag.id,
+                        &id,
+                        position == TagDropPosition::After,
+                    ) {
+                        this.show_notice(this.error_message(error), cx);
+                    }
+                }
+                this.notify_dialog(cx);
+                cx.notify();
+            }))
+            .when_some(position, |row, position| {
+                let line = div()
+                    .debug_selector(|| format!("group-drop-line-{scope:?}"))
+                    .absolute()
+                    .left_0()
+                    .right_0()
+                    .h(px(2.))
+                    .rounded_full()
+                    .bg(p.accent);
+                row.child(match position {
+                    TagDropPosition::Before => line.top(px(-2.)),
+                    TagDropPosition::After => line.bottom(px(-2.)),
+                })
+            })
+    }
+
     pub(super) fn small_choice<F>(
         &self,
         id: &'static str,
@@ -79,14 +207,19 @@ impl KitterApp {
         };
         let drag_handle = div()
             .id(ElementId::Name(format!("drag-tag-{tag_id}").into()))
-            .w(px(16.))
+            .absolute()
+            .left(px(if is_child { 18. } else { 0. }))
+            .top(px(5.))
+            .w(px(24.))
             .h(px(24.))
             .flex()
             .items_center()
             .justify_center()
             .cursor(CursorStyle::OpenHand)
-            .invisible()
-            .group_hover(group.clone(), |handle| handle.visible())
+            .opacity(0.)
+            .tab_index(0)
+            .focus_visible(|handle| handle.opacity(1.))
+            .group_hover(group.clone(), |handle| handle.opacity(1.))
             .child(
                 div()
                     .flex()
@@ -143,7 +276,8 @@ impl KitterApp {
             .id(ElementId::Name(format!("manage-tag-{tag_id}").into()))
             .group(group)
             .h(px(34.))
-            .pl(px(if is_child { 18. } else { 0. }))
+            .ml(px(-24.))
+            .pl(px(if is_child { 42. } else { 24. }))
             .pr(px(6.))
             .rounded(px(RADIUS_CONTROL))
             .flex()
@@ -275,7 +409,6 @@ impl KitterApp {
             .items_center()
             .gap(px(4.))
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .child(div().w(px(16.)))
             .child(
                 Input::new(&self.tags_flow.name_input)
                     .small()
@@ -382,7 +515,7 @@ impl KitterApp {
                 .id("new-tag-at-end")
                 .mt(px(6.))
                 .h(px(CONTROL_HEIGHT))
-                .px(px(8.))
+                .pr(px(8.))
                 .rounded(px(RADIUS_CONTROL))
                 .flex()
                 .items_center()
@@ -401,11 +534,18 @@ impl KitterApp {
             tags.tag(id).map(|tag| {
                 let count = tags.count(id);
                 let has_children = tags.children(id).next().is_some();
-                let message = if self.uses_english() {
+                let message = if self.uses_english() && has_children {
                     format!(
-                        "Delete #{}? Child tags and {} assignment(s) will also be removed.",
-                        tag.name, count
+                        "Delete #{}? Child tags and {} will also be removed.",
+                        tag.name,
+                        counted(count, "assignment", "assignments")
                     )
+                } else if self.uses_english() {
+                    let target = match scope {
+                        TagScope::Skills => counted(count, "skill", "skills"),
+                        TagScope::Projects => counted(count, "project", "projects"),
+                    };
+                    format!("Delete #{}? {target} will lose this tag.", tag.name)
                 } else if has_children {
                     format!(
                         "删除 #{}？它的子标签和 {} 个关联也会一并移除。",
@@ -486,7 +626,8 @@ impl KitterApp {
             .child(
                 div()
                     .id("tag-manager-scroll")
-                    .px(px(20.))
+                    .pl(px(32.))
+                    .pr(px(20.))
                     .pt(px(20.))
                     .pb(px(18.))
                     .max_h(px(600.))
@@ -752,7 +893,7 @@ impl KitterApp {
                 })
                 .unwrap_or_else(|| storage_names.first().cloned().unwrap_or_default())
         } else if self.uses_english() {
-            format!("{} Skills", storage_names.len())
+            counted(storage_names.len(), "skill", "skills")
         } else {
             format!("{} 个技能", storage_names.len())
         };
@@ -867,6 +1008,24 @@ impl KitterApp {
 
     pub(super) fn add_group_control(&self, cx: &mut Context<Self>) -> AnyElement {
         let p = self.palette();
+        if self.groups_flow.edit == Some(GroupEdit::Create) {
+            return div()
+                .mt(px(5.))
+                .flex()
+                .flex_col()
+                .gap(px(5.))
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(p.secondary)
+                        .child(self.tr("分组", "Group")),
+                )
+                .child(self.group_inline_editor("add-group-editor", cx))
+                .when_some(self.tags_flow.error.clone(), |view, error| {
+                    view.child(div().text_size(px(12.)).text_color(p.danger).child(error))
+                })
+                .into_any_element();
+        }
         let english = self.uses_english();
         let app = cx.entity().downgrade();
         let groups = self.model.library.groups();
@@ -904,24 +1063,29 @@ impl KitterApp {
             .anchor(Anchor::TopRight)
             .trigger(
                 self.dropdown_button("add-group-select", current, 13.)
-                    .w_full(),
+                    .w_full()
+                    .disabled(self.add_flow.task.is_some())
+                    .when(self.add_flow.task.is_some(), |button| button.opacity(0.55)),
             )
             .content(move |_, _, popover_cx| {
                 let mut menu = div()
                     .w(px(240.))
-                    .p(px(4.))
+                    .p(px(8.))
+                    .flex()
+                    .flex_col()
+                    .gap(px(4.))
                     .rounded(px(RADIUS_MENU))
                     .border_1()
                     .border_color(p.border_strong)
                     .bg(p.elevated)
-                    .shadow_lg();
+                    .shadow_sm();
                 let clear_app = app.clone();
                 menu = menu.child(
                     div()
                         .id("add-group-none")
                         .h(px(32.))
                         .px(px(10.))
-                        .rounded(px(5.))
+                        .rounded(px(RADIUS_CONTROL))
                         .flex()
                         .items_center()
                         .cursor_pointer()
@@ -940,6 +1104,9 @@ impl KitterApp {
                         })
                         .on_click(popover_cx.listener(move |_, _, _, cx| {
                             let _ = clear_app.update(cx, |this, cx| {
+                                if this.add_flow.task.is_some() {
+                                    return;
+                                }
                                 this.add_flow.group_enabled = false;
                                 this.notify_dialog(cx);
                             });
@@ -954,7 +1121,7 @@ impl KitterApp {
                             .id(ElementId::Name(format!("add-group-option-{index}").into()))
                             .h(px(32.))
                             .px(px(10.))
-                            .rounded(px(5.))
+                            .rounded(px(RADIUS_CONTROL))
                             .flex()
                             .items_center()
                             .cursor_pointer()
@@ -969,6 +1136,9 @@ impl KitterApp {
                             .child(group_name.clone())
                             .on_click(popover_cx.listener(move |_, _, _, cx| {
                                 let _ = item_app.update(cx, |this, cx| {
+                                    if this.add_flow.task.is_some() {
+                                        return;
+                                    }
                                     this.add_flow.group_enabled = true;
                                     this.add_flow.group_name = Some(group_name.clone());
                                     this.notify_dialog(cx);
@@ -978,34 +1148,35 @@ impl KitterApp {
                     );
                 }
                 let create_app = app.clone();
-                menu.child(
-                    div()
-                        .id("add-group-create")
-                        .mt(px(4.))
-                        .pt(px(4.))
-                        .border_t_1()
-                        .border_color(p.border)
-                        .h(px(32.))
-                        .px(px(10.))
-                        .rounded(px(5.))
-                        .flex()
-                        .items_center()
-                        .cursor_pointer()
-                        .text_size(px(13.))
-                        .text_color(p.secondary)
-                        .hover(move |row| row.bg(p.hover))
-                        .child(create_group_label)
-                        .on_click(popover_cx.listener(move |_, _, window, cx| {
-                            let _ = create_app.update(cx, |this, cx| {
-                                this.open_group_dialog(cx);
-                                this.start_group_edit(GroupEdit::Create, window, cx);
-                            });
-                            cx.emit(DismissEvent);
-                        })),
-                )
+                menu.child(div().h(px(1.)).mx(px(6.)).my(px(2.)).bg(p.border))
+                    .child(
+                        div()
+                            .id("add-group-create")
+                            .debug_selector(|| "add-group-create".into())
+                            .h(px(32.))
+                            .px(px(10.))
+                            .rounded(px(RADIUS_CONTROL))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .text_size(px(13.))
+                            .text_color(p.secondary)
+                            .hover(move |row| row.bg(p.hover))
+                            .child(create_group_label)
+                            .on_click(popover_cx.listener(move |_, _, window, cx| {
+                                let _ = create_app.update(cx, |this, cx| {
+                                    if this.add_flow.task.is_some() {
+                                        return;
+                                    }
+                                    this.start_group_edit(GroupEdit::Create, window, cx);
+                                });
+                                cx.emit(DismissEvent);
+                            })),
+                    )
             });
         div()
             .id("add-group-control")
+            .debug_selector(|| "add-group-control".into())
             .mt(px(5.))
             .flex()
             .flex_col()

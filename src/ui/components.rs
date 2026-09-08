@@ -435,7 +435,7 @@ impl KitterApp {
                     .child(Self::icon("icons/package.svg", 28., p.muted))
                     .child(div().mt(px(10.)).text_size(px(14.)).child(self.tr(
                         "没有检测到插件加载的技能",
-                        "No plugin-provided Skills detected",
+                        "No plugin-provided skills detected",
                     ))),
             );
         }
@@ -455,9 +455,9 @@ impl KitterApp {
                 .map(|agent| agent.icon_path)
                 .unwrap_or("icons/package.svg");
             let count = if self.uses_english() {
-                format!("{} Skills", group.skills.len())
+                counted(group.skills.len(), "skill", "skills")
             } else {
-                format!("{} Skills", group.skills.len())
+                format!("{} 个技能", group.skills.len())
             };
             let mut plugin = div().border_b_1().border_color(p.border).child(
                 div()
@@ -915,6 +915,11 @@ impl KitterApp {
     pub(super) fn skills_manage_control(&self, cx: &mut Context<Self>) -> Popover {
         let p = self.palette();
         let app = cx.entity().downgrade();
+        let labels = [
+            self.tr("检查更新", "Check for updates"),
+            self.tr("标签管理", "Manage tags"),
+            self.tr("分组管理", "Manage groups"),
+        ];
         Popover::new("skills-manage-menu")
             .appearance(false)
             .anchor(Anchor::TopLeft)
@@ -941,15 +946,14 @@ impl KitterApp {
             )
             .content(move |_, _, popover_cx| {
                 let mut menu = div()
-                    .w(px(150.))
+                    .w(px(180.))
                     .p(px(4.))
                     .rounded(px(RADIUS_MENU))
                     .border_1()
                     .border_color(p.border_strong)
                     .bg(p.elevated)
                     .shadow_lg();
-                for (index, label) in [(0, "检查更新"), (1, "标签管理"), (2, "分组管理")]
-                {
+                for (index, label) in labels.into_iter().enumerate() {
                     let item_app = app.clone();
                     menu = menu.child(
                         div()

@@ -225,14 +225,14 @@ impl KitterApp {
             let set_tags_path = path.clone();
             let remove_app = project_context_app.clone();
             let remove_path = path.clone();
-            let set_tags_label = self.tr("设置标签", "Set Tags").to_string();
+            let set_tags_label = self.tr("设置标签", "Set tags").to_string();
             let reveal_label = if cfg!(target_os = "macos") {
                 self.tr("在访达中显示", "Show in Finder")
             } else {
-                self.tr("在文件夹中显示", "Show in Folder")
+                self.tr("在文件夹中显示", "Show in folder")
             }
             .to_string();
-            let remove_label = self.tr("移除项目", "Remove Project").to_string();
+            let remove_label = self.tr("移除项目", "Remove project").to_string();
             let remove_menu_color = p.danger;
             recent_rows = recent_rows.child(
                 div()
@@ -391,7 +391,7 @@ impl KitterApp {
                             .truncate()
                             .child(match global_skill_count {
                                 Some(count) if self.uses_english() => {
-                                    format!("{count} user-level Skills")
+                                    counted(count, "user-level skill", "user-level skills")
                                 }
                                 Some(count) => format!("{count} 个用户级技能"),
                                 None => self.tr("正在扫描…", "Scanning…").into(),
@@ -536,20 +536,20 @@ impl KitterApp {
                         .child(div().mt(px(10.)).text_size(px(14.)).child(
                             if self.projects_view.selected_project_agent.is_some() {
                                 if self.uses_english() {
-                                    format!("No effective Skills for {selected_agent}")
+                                    format!("No effective skills for {selected_agent}")
                                 } else {
                                     format!("没有检测到对 {selected_agent} 生效的技能")
                                 }
                             } else if is_global {
                                 self.tr(
                                     "没有检测到用户级生效的技能",
-                                    "No user-level Skills detected",
+                                    "No user-level skills detected",
                                 )
                                 .to_string()
                             } else {
                                 self.tr(
                                     "没有检测到对这个项目生效的技能",
-                                    "No effective Skills detected for this project",
+                                    "No effective skills detected for this project",
                                 )
                                 .to_string()
                             },
@@ -694,7 +694,7 @@ impl KitterApp {
                         .text_color(p.muted)
                         .child(self.tr(
                             "Kitter 会读取项目里的技能，并让你管理它们的安装边界。",
-                            "Kitter reads the Skills in a project and lets you manage where they are installed.",
+                            "Kitter reads the skills in a project and lets you manage where they are installed.",
                         )),
                 )
                 .child(

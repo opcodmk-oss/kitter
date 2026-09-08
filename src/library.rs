@@ -684,6 +684,31 @@ impl SkillLibrary {
         self.registry.groups.clone()
     }
 
+    pub fn move_group(&mut self, id: &str, target: &str, after: bool) -> Result<bool> {
+        let groups = &mut self.registry.groups;
+        let Some(from) = groups.iter().position(|group| group.id == id) else {
+            return Ok(false);
+        };
+        let Some(to) = groups.iter().position(|group| group.id == target) else {
+            return Ok(false);
+        };
+        if from == to {
+            return Ok(false);
+        }
+        let insert = to + usize::from(after) - usize::from(from < to);
+        if from == insert {
+            return Ok(false);
+        }
+        let previous = groups.clone();
+        let group = groups.remove(from);
+        groups.insert(insert, group);
+        if let Err(error) = self.save() {
+            self.registry.groups = previous;
+            return Err(error);
+        }
+        Ok(true)
+    }
+
     pub fn ensure_group(&mut self, name: &str) -> Result<String> {
         let name = normalize_group_name(name)?;
         if let Some(group) = self
@@ -1382,6 +1407,37 @@ mod tests {
 
         let json = serde_json::to_string(&library.list().unwrap()[0].record).unwrap();
         assert!(!json.contains("description"));
+    }
+
+    #[test]
+    fn group_order_is_persisted_without_changing_group_identity() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut library = SkillLibrary::open_in(temp.path()).unwrap();
+        let a = library.create_group("A").unwrap();
+        let b = library.create_group("B").unwrap();
+        let c = library.create_group("C").unwrap();
+        assert!(library.move_group(&a.id, &c.id, true).unwrap());
+        assert_eq!(
+            library
+                .groups()
+                .iter()
+                .map(|g| g.name.as_str())
+                .collect::<Vec<_>>(),
+            ["B", "C", "A"]
+        );
+        assert!(library.move_group(&a.id, &b.id, false).unwrap());
+        assert!(!library.move_group(&a.id, &b.id, false).unwrap());
+        assert!(!library.move_group(&a.id, &a.id, true).unwrap());
+        assert!(!library.move_group("missing", &a.id, true).unwrap());
+        let reopened = SkillLibrary::open_in(temp.path()).unwrap();
+        assert_eq!(
+            reopened
+                .groups()
+                .iter()
+                .map(|g| g.id.clone())
+                .collect::<Vec<_>>(),
+            [a.id, b.id, c.id]
+        );
     }
 
     #[test]

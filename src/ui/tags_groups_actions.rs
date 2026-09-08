@@ -89,7 +89,7 @@ impl KitterApp {
                 .map(|skill| skill.record.name.clone())
                 .or_else(|| Some(first))
         } else if self.uses_english() {
-            Some(format!("{} Skills", skills.len()))
+            Some(counted(skills.len(), "skill", "skills"))
         } else {
             Some(format!("{} 个技能", skills.len()))
         };
@@ -161,7 +161,7 @@ impl KitterApp {
                     return;
                 }
             }
-            Err(error) => self.tags_flow.error = Some(error.to_string()),
+            Err(error) => self.tags_flow.error = Some(self.error_message(error)),
         }
         self.notify_dialog(cx);
         cx.notify();
@@ -186,6 +186,7 @@ impl KitterApp {
         };
         self.groups_flow.name_input.update(cx, |input, cx| {
             input.set_value(value, window, cx);
+            input.focus_handle(cx).focus(window, cx);
         });
         self.groups_flow.edit = Some(edit);
         self.groups_flow.delete_pending = None;
@@ -194,6 +195,9 @@ impl KitterApp {
     }
 
     pub(super) fn commit_group_edit(&mut self, cx: &mut Context<Self>) {
+        if self.add_flow.task.is_some() {
+            return;
+        }
         let Some(edit) = self.groups_flow.edit.clone() else {
             return;
         };
@@ -210,11 +214,20 @@ impl KitterApp {
         };
         match result {
             Ok(()) => {
+                if self
+                    .shell
+                    .dialog_body
+                    .as_ref()
+                    .is_some_and(|body| matches!(body.read(cx).kind, DialogKind::Add))
+                {
+                    self.add_flow.group_enabled = true;
+                    self.add_flow.group_name = Some(name);
+                }
                 self.groups_flow.edit = None;
                 self.tags_flow.error = None;
                 self.refresh(cx);
             }
-            Err(error) => self.tags_flow.error = Some(error.to_string()),
+            Err(error) => self.tags_flow.error = Some(self.error_message(error)),
         }
         self.notify_dialog(cx);
         cx.notify();
@@ -235,7 +248,7 @@ impl KitterApp {
                 self.refresh(cx);
                 self.show_notice(self.tr("已更新技能分组", "Skill group updated"), cx);
             }
-            Err(error) => self.show_notice(error.to_string(), cx),
+            Err(error) => self.show_notice(self.error_message(error), cx),
         }
     }
 
@@ -256,7 +269,7 @@ impl KitterApp {
                 .library
                 .assign_group_by_storage(&skill, group_id.as_deref())
             {
-                failure = Some(error.to_string());
+                failure = Some(self.error_message(error));
                 break;
             }
         }
@@ -290,17 +303,17 @@ impl KitterApp {
                 self.skills_view.selection.remove(&names, &order);
                 self.refresh(cx);
                 let message = if delete_skills {
-                    self.tr("已删除分组及其中的技能", "Group and its Skills deleted")
+                    self.tr("已删除分组及其中的技能", "Group and its skills deleted")
                 } else {
                     self.tr(
                         "已删除分组，技能已移到未分组",
-                        "Group deleted; Skills are now ungrouped",
+                        "Group deleted; skills are now ungrouped",
                     )
                 };
                 self.show_notice(message, cx);
             }
             Err(error) => {
-                self.tags_flow.error = Some(error.to_string());
+                self.tags_flow.error = Some(self.error_message(error));
                 self.notify_dialog(cx);
             }
         }

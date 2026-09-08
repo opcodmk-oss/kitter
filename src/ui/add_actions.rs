@@ -42,7 +42,7 @@ impl KitterApp {
                         this.add_flow.group_name = Some(scan.default_group_name());
                         this.add_flow.scan = Some(scan);
                     }
-                    Err(error) => this.add_flow.error = Some(error.to_string()),
+                    Err(error) => this.add_flow.error = Some(this.error_message(error)),
                 }
                 this.notify_dialog(cx);
             });
@@ -81,7 +81,11 @@ impl KitterApp {
             };
             match project::install_from_path(&project, &skill.path, &skill.record.name, &targets) {
                 Ok(()) => installed += 1,
-                Err(error) => failures.push(format!("{}：{}", skill.record.name, error)),
+                Err(error) => failures.push(format!(
+                    "{}: {}",
+                    skill.record.name,
+                    self.error_message(error)
+                )),
             }
         }
         if installed > 0 && !self.install_flow.global {
@@ -96,10 +100,10 @@ impl KitterApp {
         self.install_flow.modal = false;
         self.close_dialog(cx);
         let summary = if failures.is_empty() {
-            if installed == 1 {
-                self.tr("已安装", "Installed").to_string()
-            } else if self.uses_english() {
-                format!("Installed {installed} Skills")
+            if self.uses_english() {
+                format!("Installed {}", counted(installed, "skill", "skills"))
+            } else if installed == 1 {
+                "已安装".to_string()
             } else {
                 format!("已安装 {} 个技能", installed)
             }
@@ -166,14 +170,14 @@ impl KitterApp {
                         this.add_flow.selected = scan.default_selection();
                         if scan.candidates.is_empty() {
                             this.add_flow.error = Some(
-                                this.tr("没有发现可托管的技能", "No Skills available to adopt")
+                                this.tr("没有发现可托管的技能", "No skills available to adopt")
                                     .into(),
                             );
                         }
                         this.add_flow.adoption_scan = Some(Arc::new(scan));
                         this.reset_adoption_rows();
                     }
-                    Err(error) => this.add_flow.error = Some(error.to_string()),
+                    Err(error) => this.add_flow.error = Some(this.error_message(error)),
                 }
                 this.notify_dialog(cx);
             });
@@ -215,6 +219,7 @@ impl KitterApp {
         };
         let selected = self.add_flow.selected.clone();
         let data_dir = self.model.library.data_dir().to_path_buf();
+        let english = self.uses_english();
         self.add_flow.task = Some(AddTask::Importing);
         self.add_flow.error = None;
         self.notify_dialog(cx);
@@ -239,7 +244,11 @@ impl KitterApp {
                                 succeeded.insert(identity);
                                 last = Some(storage);
                             }
-                            Err(error) => failures.push(format!("{}：{error}", candidate.name)),
+                            Err(error) => failures.push(format!(
+                                "{}: {}",
+                                candidate.name,
+                                messages::error_message(&error.to_string(), english)
+                            )),
                         }
                     }
                     Ok::<_, anyhow::Error>((library, succeeded, failures, last))
@@ -262,7 +271,7 @@ impl KitterApp {
                         if failures.is_empty() {
                             this.close_dialog(cx);
                             let message = if this.uses_english() {
-                                format!("Adopted {} Skill(s)", succeeded.len())
+                                format!("Adopted {}", counted(succeeded.len(), "skill", "skills"))
                             } else {
                                 format!("已托管 {} 个技能", succeeded.len())
                             };
@@ -273,7 +282,7 @@ impl KitterApp {
                         }
                     }
                     Err(error) => {
-                        this.add_flow.error = Some(error.to_string());
+                        this.add_flow.error = Some(this.error_message(error));
                         this.notify_dialog(cx);
                     }
                 }
@@ -318,7 +327,7 @@ impl KitterApp {
                         this.add_flow.group_name = Some(scan.default_group_name());
                         this.add_flow.scan = Some(scan);
                     }
-                    Err(error) => this.add_flow.error = Some(error.to_string()),
+                    Err(error) => this.add_flow.error = Some(this.error_message(error)),
                 }
                 this.notify_dialog(cx);
             });

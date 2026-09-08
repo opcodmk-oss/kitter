@@ -123,7 +123,7 @@ impl KitterApp {
                 .items_center()
                 .text_size(px(12.))
                 .text_color(p.secondary)
-                .child(candidate.origin.label())
+                .child(self.source_label(&candidate.origin))
                 .into_any_element(),
             AdoptionRow::Candidate(_) => {
                 let id = candidate.id.clone();
@@ -137,13 +137,13 @@ impl KitterApp {
                     .as_ref()
                     .is_some_and(|scan| scan.has_conflict(&candidate.identity()));
                 let label = if let Some(issue) = &candidate.issue {
-                    issue.clone()
+                    self.error_message(issue)
                 } else if conflict {
                     self.tr("选择版本", "Choose version").into()
                 } else if candidate.existing_storage.is_some() {
                     self.tr("已托管", "Managed").into()
                 } else if self.uses_english() {
-                    format!("{} references", candidate.references.len())
+                    counted(candidate.references.len(), "reference", "references")
                 } else {
                     format!("{} 处引用", candidate.references.len())
                 };

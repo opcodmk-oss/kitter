@@ -42,6 +42,7 @@ mod effective_view;
 mod flows;
 mod install_flow;
 mod layout;
+mod messages;
 mod motion;
 mod organize_flows;
 mod overlay_actions;
@@ -57,6 +58,7 @@ mod state;
 mod tags_groups_actions;
 mod theme;
 
+use crate::text::counted;
 use effective_view::{EffectivePluginGroup, EffectiveSkillRow, same_file};
 use gpui_component::resizable::ResizableState;
 use skill_selection::SkillSelection;
@@ -245,6 +247,35 @@ impl Render for SkillDrag {
             .py(px(6.))
             .rounded(px(RADIUS_CONTROL))
             .bg(rgb(0xeeeeee))
+            .font_family(MONO)
+            .text_size(px(12.))
+            .child(self.name.clone())
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum GroupDragScope {
+    Management,
+    List,
+}
+
+#[derive(Clone)]
+struct GroupDrag {
+    scope: GroupDragScope,
+    id: String,
+    name: String,
+    background: Rgba,
+    foreground: Rgba,
+}
+
+impl Render for GroupDrag {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(10.))
+            .py(px(6.))
+            .rounded(px(RADIUS_CONTROL))
+            .bg(self.background)
+            .text_color(self.foreground)
             .font_family(MONO)
             .text_size(px(12.))
             .child(self.name.clone())
@@ -466,7 +497,7 @@ impl KitterApp {
         };
         let skill_search = cx.new(|cx| {
             InputState::new(window, cx).placeholder(if english {
-                "Search Skills"
+                "Search skills"
             } else {
                 "搜索技能"
             })
@@ -663,6 +694,9 @@ impl KitterApp {
                 let SelectEvent::Confirm(Some(kind)) = event else {
                     return;
                 };
+                if this.add_flow.task.is_some() {
+                    return;
+                }
                 this.add_flow.kind = *kind;
                 let english = this.uses_english();
                 let placeholder = match this.add_flow.kind {
@@ -789,6 +823,7 @@ impl KitterApp {
                 return_to_assignment: None,
             },
             groups_flow: GroupsFlowState {
+                drop_target: None,
                 name_input: group_name_input,
                 edit: None,
                 delete_pending: None,
@@ -1117,7 +1152,7 @@ impl KitterApp {
             .model
             .library
             .read_file_by_storage(storage_name, &self.skills_view.selected_file)
-            .unwrap_or_else(|error| error.to_string());
+            .unwrap_or_else(|error| self.error_message(error));
         let snapshot = ContentSnapshot {
             skill: storage_name.to_string(),
             file: self.skills_view.selected_file.clone(),
@@ -1134,7 +1169,7 @@ impl KitterApp {
         self.skills_view.skill_search.update(cx, |input, cx| {
             input.set_placeholder(
                 if english {
-                    "Search Skills"
+                    "Search skills"
                 } else {
                     "搜索技能"
                 },
@@ -1155,6 +1190,31 @@ impl KitterApp {
         });
         self.tags_flow.name_input.update(cx, |input, cx| {
             input.set_placeholder(if english { "Tag name" } else { "标签名称" }, window, cx)
+        });
+        self.groups_flow.name_input.update(cx, |input, cx| {
+            input.set_placeholder(
+                if english {
+                    "Group name"
+                } else {
+                    "分组名称"
+                },
+                window,
+                cx,
+            )
+        });
+        let placeholder = match self.add_flow.kind {
+            AddKind::Npx => self.tr(
+                "粘贴 skills.sh、GitHub 地址或 npx skills add 命令",
+                "Paste a skills.sh/GitHub URL or npx skills add command",
+            ),
+            AddKind::Claude => self.tr(
+                "插件名称或 claude plugin install 命令",
+                "Plugin name or claude plugin install command",
+            ),
+            AddKind::Local | AddKind::Existing => "",
+        };
+        self.add_flow.primary_input.update(cx, |input, cx| {
+            input.set_placeholder(placeholder, window, cx)
         });
         self.add_flow.source_select.update(cx, |select, cx| {
             select.set_items(
@@ -1574,6 +1634,203 @@ mod e2e_tests {
     }
 
     #[test]
+    fn groups_drag_in_both_views_and_keep_the_saved_order() {
+        use gpui::MouseButton;
+        let mut cx = TestAppContext::single();
+        init(&mut cx);
+        let temp = tempfile::tempdir().unwrap();
+        let (app, cx) = cx.add_window_view({
+            let data_dir = temp.path().join("data");
+            move |window, cx| KitterApp::new_in(data_dir, window, cx)
+        });
+        let (a, b) = app.update(cx, |app, cx| {
+            let a = app.model.library.create_group("A").unwrap().id;
+            let b = app.model.library.create_group("B").unwrap().id;
+            app.open_group_dialog(cx);
+            (a, b)
+        });
+        let a_row: &'static str = format!("sort-group-{a}").leak();
+        let b_row: &'static str = format!("sort-group-{b}").leak();
+        let a_handle: &'static str = format!("drag-group-{a}").leak();
+        for management in [true, false] {
+            if !management {
+                app.update(cx, |app, cx| app.close_dialog(cx));
+            }
+            cx.refresh().unwrap();
+            let row = cx.debug_bounds(a_row).unwrap();
+            cx.simulate_mouse_move(row.center(), None, Modifiers::none());
+            cx.refresh().unwrap();
+            let start = if management {
+                cx.debug_bounds(a_handle).unwrap().center()
+            } else {
+                assert!(
+                    cx.debug_bounds(a_handle).is_none(),
+                    "list must not have a drag handle or its spacing"
+                );
+                row.center()
+            };
+            if management {
+                let handle = cx.debug_bounds(a_handle).unwrap();
+                assert_eq!(handle.size.width, px(24.));
+                assert_eq!(handle.origin.x, row.origin.x);
+                assert_eq!(
+                    cx.debug_bounds(a_row).unwrap(),
+                    row,
+                    "hover must not shift the row"
+                );
+            }
+            let target = cx.debug_bounds(b_row).unwrap();
+            let end = point(
+                target.center().x,
+                target.center().y + if management { px(5.) } else { px(-5.) },
+            );
+            cx.simulate_mouse_down(start, MouseButton::Left, Modifiers::none());
+            cx.simulate_mouse_move(
+                start + point(px(5.), px(0.)),
+                MouseButton::Left,
+                Modifiers::none(),
+            );
+            cx.refresh().unwrap();
+            cx.simulate_mouse_move(end, MouseButton::Left, Modifiers::none());
+            cx.refresh().unwrap();
+            assert_eq!(
+                cx.debug_bounds("group-drop-line-Management").is_some(),
+                management
+            );
+            assert_eq!(
+                cx.debug_bounds("group-drop-line-List").is_some(),
+                !management
+            );
+            cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::none());
+            cx.refresh().unwrap();
+            app.update(cx, |app, _| {
+                let ids = app
+                    .model
+                    .library
+                    .groups()
+                    .into_iter()
+                    .map(|group| group.id)
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    ids,
+                    if management {
+                        vec![b.clone(), a.clone()]
+                    } else {
+                        vec![a.clone(), b.clone()]
+                    }
+                );
+                assert!(app.skills_view.collapsed_groups.is_empty());
+            });
+        }
+    }
+
+    #[test]
+    fn creating_group_inside_add_keeps_selection_and_dialog() {
+        use super::{DialogKind, GroupEdit};
+        let mut cx = TestAppContext::single();
+        init(&mut cx);
+        let temp = tempfile::tempdir().unwrap();
+        let (app, cx) = cx.add_window_view({
+            let data_dir = temp.path().join("data");
+            move |window, cx| KitterApp::new_in(data_dir, window, cx)
+        });
+        app.update_in(cx, |app, window, cx| {
+            app.open_add_dialog(window, cx);
+            app.add_flow.selected.extend(["one".into(), "two".into()]);
+            app.notify_dialog(cx);
+        });
+        cx.refresh().unwrap();
+        let selector = cx.debug_bounds("add-group-control").unwrap();
+        cx.simulate_click(
+            point(selector.center().x, selector.bottom() - px(12.)),
+            Modifiers::none(),
+        );
+        cx.refresh().unwrap();
+        let create = cx.debug_bounds("add-group-create").unwrap();
+        cx.simulate_click(create.center(), Modifiers::none());
+        cx.refresh().unwrap();
+        cx.simulate_input("Team");
+        cx.simulate_keystrokes("enter");
+        app.update_in(cx, |app, window, cx| {
+            assert!(matches!(
+                app.shell.dialog_body.as_ref().unwrap().read(cx).kind,
+                DialogKind::Add
+            ));
+            assert_eq!(app.add_flow.group_name.as_deref(), Some("Team"));
+            assert_eq!(app.add_flow.selected.len(), 2);
+            assert_eq!(app.model.library.groups().len(), 1);
+            app.start_group_edit(GroupEdit::Create, window, cx);
+            app.groups_flow
+                .name_input
+                .update(cx, |input, cx| input.set_value("Team", window, cx));
+            app.commit_group_edit(cx);
+            assert!(app.groups_flow.edit.is_some());
+            assert!(app.tags_flow.error.is_some());
+            assert_eq!(app.model.library.groups().len(), 1);
+        });
+    }
+
+    #[test]
+    fn busy_add_dialog_blocks_changes_and_recovers_when_idle() {
+        use super::{AddTask, Language};
+        use gpui::Focusable;
+        let mut cx = TestAppContext::single();
+        init(&mut cx);
+        let temp = tempfile::tempdir().unwrap();
+        let (app, cx) = cx.add_window_view({
+            let data_dir = temp.path().join("data");
+            move |window, cx| KitterApp::new_in(data_dir, window, cx)
+        });
+        app.update_in(cx, |app, window, cx| {
+            app.set_language(Language::En, window, cx);
+            app.open_add_dialog(window, cx);
+            app.add_flow.primary_input.update(cx, |input, cx| {
+                input.set_value("https://github.com/mattpocock/skills", window, cx);
+                input.focus_handle(cx).focus(window, cx);
+            });
+            app.add_flow.selected.extend(["one".into(), "two".into()]);
+            app.add_flow.task = Some(AddTask::Scanning);
+            app.notify_dialog(cx);
+        });
+        cx.refresh().unwrap();
+        assert!(cx.debug_bounds("scan-progress").is_some());
+        cx.simulate_keystrokes("x");
+        for selector in ["close-add-modal", "cancel-add"] {
+            let bounds = cx.debug_bounds(selector).unwrap();
+            cx.simulate_click(bounds.center(), Modifiers::none());
+        }
+        app.update_in(cx, |app, window, cx| {
+            assert_eq!(
+                app.add_flow.primary_input.read(cx).value().as_ref(),
+                "https://github.com/mattpocock/skills"
+            );
+            assert!(
+                !app.add_flow
+                    .primary_input
+                    .read(cx)
+                    .focus_handle(cx)
+                    .is_focused(window)
+            );
+            app.set_add_kind(AddKind::Local, window, cx);
+            assert!(app.add_flow.kind == AddKind::Npx);
+            app.close_dialog(cx);
+            assert!(app.shell.dialog_body.is_some());
+            app.add_flow.task = Some(AddTask::Importing);
+            app.notify_dialog(cx);
+        });
+        cx.refresh().unwrap();
+        assert!(cx.debug_bounds("scan-progress").is_none());
+        app.update(cx, |app, cx| {
+            app.add_flow.task = None;
+            app.notify_dialog(cx);
+        });
+        cx.refresh().unwrap();
+        let bounds = cx.debug_bounds("close-add-modal").unwrap();
+        cx.simulate_click(bounds.center(), Modifiers::none());
+        cx.read_entity(&app, |app, _| assert!(app.shell.dialog_body.is_none()));
+    }
+
+    #[test]
     fn local_folder_picker_scans_inside_the_isolated_window() {
         let mut cx = TestAppContext::single();
         init(&mut cx);
@@ -1621,7 +1878,7 @@ mod e2e_tests {
 
         let candidate = cx
             .debug_bounds("scan-skill-0")
-            .expect("scanned Skill row should be rendered");
+            .expect("scanned skill row should be rendered");
         cx.simulate_click(candidate.center(), Modifiers::none());
         cx.run_until_parked();
         let confirm = cx

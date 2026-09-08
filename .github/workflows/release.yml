@@ -9,9 +9,19 @@ permissions:
   contents: write
 
 jobs:
-  macos-arm64:
-    name: macOS arm64
-    runs-on: macos-latest
+  macos:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            os: macos-latest
+          - arch: x86_64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    env:
+      KITTER_ARCH: ${{ matrix.arch }}
 
     steps:
       - uses: actions/checkout@v4
@@ -24,24 +34,31 @@ jobs:
         run: |
           crate_version="$(sed -nE 's/^version = "([^"]+)"/\1/p' Cargo.toml | head -n 1)"
           test "$GITHUB_REF_NAME" = "v${crate_version}"
+      - name: Verify runner architecture
+        run: test "$(uname -m)" = "$KITTER_ARCH"
       - name: Build and verify desktop package
         run: just release
+      - name: Verify binary architectures
+        run: |
+          lipo -verify_arch "$KITTER_ARCH" target/release/Kitter.app/Contents/MacOS/Kitter
+          lipo -verify_arch "$KITTER_ARCH" target/release/kitter
+          target/release/kitter --help
       - name: Package standalone CLI
         shell: bash
         run: |
           crate_version="${GITHUB_REF_NAME#v}"
-          package_dir="target/release/kitter-cli-macos-arm64"
-          archive="target/release/Kitter-${crate_version}-cli-macos-arm64.tar.gz"
+          package_dir="target/release/kitter-cli-macos-${KITTER_ARCH}"
+          archive="target/release/Kitter-${crate_version}-cli-macos-${KITTER_ARCH}.tar.gz"
           mkdir -p "$package_dir"
           cp target/release/kitter LICENSE THIRD_PARTY_LICENSES.md "$package_dir/"
           tar -czf "$archive" -C "$package_dir" .
           tar -tzf "$archive"
       - uses: actions/upload-artifact@v4
         with:
-          name: release-macos-arm64
+          name: release-macos-${{ matrix.arch }}
           path: |
-            target/release/Kitter-*-macos-arm64.dmg
-            target/release/Kitter-*-cli-macos-arm64.tar.gz
+            target/release/Kitter-*-macos-${{ matrix.arch }}.dmg
+            target/release/Kitter-*-cli-macos-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
   linux-x86-64:
@@ -150,7 +167,7 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [macos-arm64, linux-x86-64, windows-x86-64]
+    needs: [macos, linux-x86-64, windows-x86-64]
     runs-on: ubuntu-latest
 
     steps:
@@ -164,7 +181,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 6
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 8
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \

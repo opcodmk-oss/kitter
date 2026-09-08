@@ -8,6 +8,16 @@ impl KitterApp {
     }
 
     pub(super) fn close_dialog(&mut self, cx: &mut Context<Self>) {
+        if self
+            .shell
+            .dialog_body
+            .as_ref()
+            .is_some_and(|body| matches!(body.read(cx).kind, DialogKind::Add))
+            && self.add_flow.task.is_some()
+            && self.add_flow.adoption_cancel.is_none()
+        {
+            return;
+        }
         if let Some(cancel) = self.add_flow.adoption_cancel.take() {
             cancel.store(true, Ordering::Relaxed);
             self.add_flow.task = None;
@@ -22,6 +32,7 @@ impl KitterApp {
         self.tags_flow.assignment_keys.clear();
         self.tags_flow.assignment_label = None;
         self.tags_flow.return_to_assignment = None;
+        self.groups_flow.drop_target = None;
         self.groups_flow.edit = None;
         self.groups_flow.delete_pending = None;
         self.groups_flow.move_skills.clear();

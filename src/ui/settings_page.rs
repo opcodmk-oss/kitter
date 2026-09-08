@@ -163,7 +163,7 @@ impl KitterApp {
                     self.tr("技能存放位置", "Skills location"),
                     self.tr(
                         "Kitter 用来保存所有技能的文件夹。",
-                        "The folder where Kitter keeps all Skills.",
+                        "The folder where Kitter keeps all skills.",
                     ),
                 )
                 .child(

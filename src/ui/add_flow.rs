@@ -1,9 +1,59 @@
 use super::*;
 
 impl KitterApp {
+    fn scan_progress(&self, window: &mut Window, cx: &mut Context<Self>) -> Stateful<Div> {
+        let p = self.palette();
+        let label = if matches!(self.add_flow.kind, AddKind::Npx | AddKind::Claude) {
+            self.tr("正在获取技能…", "Fetching skills…")
+        } else {
+            self.tr("正在扫描技能…", "Scanning skills…")
+        };
+        let fill = div()
+            .absolute()
+            .h_full()
+            .rounded(px(2.))
+            .bg(p.secondary)
+            .left(relative(motion::progress_phase(window, cx) * 1.3 - 0.3))
+            .w(relative(0.3));
+        div()
+            .id("scan-progress")
+            .debug_selector(|| "scan-progress".into())
+            .mt(px(16.))
+            .flex()
+            .flex_col()
+            .gap(px(7.))
+            .child(
+                div()
+                    .text_size(px(12.))
+                    .text_color(p.secondary)
+                    .child(label),
+            )
+            .child(
+                div()
+                    .relative()
+                    .w_full()
+                    .h(px(4.))
+                    .rounded(px(2.))
+                    .bg(p.raised)
+                    .overflow_hidden()
+                    .child(fill),
+            )
+    }
+
     pub(super) fn add_skill_modal(&self, window: &mut Window, cx: &mut Context<Self>) -> Div {
         let p = self.palette();
         let pending = self.add_flow.task.is_some();
+        let can_close = !pending || self.add_flow.adoption_cancel.is_some();
+        if pending
+            && self
+                .add_flow
+                .primary_input
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        {
+            self.shell.focus_handle.focus(window, cx);
+        }
         let selected_kind = self.add_flow.kind;
         let source_label = match selected_kind {
             AddKind::Npx => "skills.sh / github",
@@ -19,7 +69,8 @@ impl KitterApp {
             .trigger(
                 self.dropdown_button("add-source-select", source_label, 14.)
                     .w_full()
-                    .disabled(pending),
+                    .disabled(pending)
+                    .when(pending, |button| button.opacity(0.55)),
             )
             .content(move |_, _, popover_cx| {
                 let mut menu = div()
@@ -179,7 +230,7 @@ impl KitterApp {
                     })
                     .child(Self::icon("icons/folder.svg", 16., p.secondary))
                     .text_size(px(14.))
-                    .child(self.tr("选择技能文件夹", "Choose Skill folder"))
+                    .child(self.tr("选择技能文件夹", "Choose skill folder"))
                     .when(!pending, |button| {
                         button.on_mouse_down(
                             MouseButton::Left,
@@ -198,6 +249,7 @@ impl KitterApp {
                 )
                 .child(
                     Input::new(&self.add_flow.primary_input)
+                        .disabled(pending)
                         .h(px(INPUT_HEIGHT))
                         .w_full()
                         .rounded(px(RADIUS_CONTROL))
@@ -237,7 +289,7 @@ impl KitterApp {
                             div()
                                 .text_size(px(12.))
                                 .text_color(p.secondary)
-                                .child(self.tr("选择技能", "Select Skills")),
+                                .child(self.tr("选择技能", "Select skills")),
                         )
                         .child(div().flex_1())
                         .child(
@@ -391,7 +443,7 @@ impl KitterApp {
                         .items_center()
                         .child(div().text_size(px(12.)).text_color(p.secondary).child(
                             if self.uses_english() {
-                                format!("Found {} Skills", scan.skills().len())
+                                format!("Found {}", counted(scan.skills().len(), "skill", "skills"))
                             } else {
                                 format!("发现 {} 个技能", scan.skills().len())
                             },
@@ -431,24 +483,6 @@ impl KitterApp {
                         .truncate()
                         .child(display_path(Path::new(scan.source_label()))),
                 );
-        } else if self.add_flow.task == Some(AddTask::Scanning) {
-            form = form.child(
-                div()
-                    .mt(px(10.))
-                    .h(px(82.))
-                    .rounded(px(RADIUS_CARD))
-                    .border_1()
-                    .border_color(p.border)
-                    .bg(p.surface)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .gap(px(9.))
-                    .text_size(px(14.))
-                    .text_color(p.secondary)
-                    .child(self.shell.spinner_accent.clone())
-                    .child(self.tr("正在扫描…", "Scanning…")),
-            );
         }
         let has_scan = self.add_flow.scan.is_some() || self.add_flow.adoption_scan.is_some();
         let ready = !pending
@@ -468,6 +502,11 @@ impl KitterApp {
                     .is_empty()
             };
         let action_label = match self.add_flow.task {
+            Some(AddTask::Scanning)
+                if matches!(self.add_flow.kind, AddKind::Npx | AddKind::Claude) =>
+            {
+                self.tr("正在获取…", "Fetching…").to_string()
+            }
             Some(AddTask::Scanning) => self.tr("正在扫描…", "Scanning…").to_string(),
             Some(AddTask::Importing) if self.add_flow.kind == AddKind::Existing => {
                 self.tr("正在托管…", "Adopting…").to_string()
@@ -498,19 +537,21 @@ impl KitterApp {
             .flex()
             .items_center()
             .justify_center()
-            .cursor_pointer()
             .bg(p.raised)
-            .hover(move |button| button.bg(p.hover))
-            .text_color(p.text)
-            .child(Self::icon("icons/x.svg", 14., p.text))
-            .when(
-                !pending || self.add_flow.adoption_cancel.is_some(),
-                |button| {
-                    button.on_click(cx.listener(|this, _, _, cx| {
+            .text_color(if can_close { p.text } else { p.muted })
+            .child(Self::icon(
+                "icons/x.svg",
+                14.,
+                if can_close { p.text } else { p.muted },
+            ))
+            .when(can_close, |button| {
+                button
+                    .cursor_pointer()
+                    .hover(move |button| button.bg(p.hover))
+                    .on_click(cx.listener(|this, _, _, cx| {
                         this.close_dialog(cx);
                     }))
-                },
-            );
+            });
         let panel = div()
             .relative()
             .bg(p.elevated)
@@ -543,17 +584,18 @@ impl KitterApp {
                     )
                     .child(
                         div()
-                            .mt(px(5.))
+                            .mt(px(12.))
                             .text_size(px(14.))
                             .line_height(relative(1.5))
                             .text_color(p.muted)
                             .child(if self.add_flow.kind == AddKind::Existing {
                                 self.tr("扫描指定目录下所有技能并托管到 Kitter。", "Scan all skills in the selected directory and adopt them into Kitter.")
                             } else {
-                                self.tr("选择来源并粘贴地址，Kitter 会自动识别其中可用的技能。", "Choose a source and paste its address. Kitter will find the available Skills.")
+                                self.tr("选择来源并粘贴地址，Kitter 会自动识别其中可用的技能。", "Choose a source and paste its address. Kitter will find the available skills.")
                             }),
                     )
-                    .child(form),
+                    .child(form)
+                    .when(self.add_flow.task == Some(AddTask::Scanning), |panel| panel.child(self.scan_progress(window, cx))),
             )
             .child(
                 div()
@@ -570,19 +612,20 @@ impl KitterApp {
                     .gap(px(8.))
                     .child(
                         div()
-                            .id("cancel-add")
+                            .id("cancel-add").debug_selector(|| "cancel-add".into())
                             .h(px(DIALOG_CONTROL_HEIGHT))
                             .px(px(16.))
                             .rounded(px(RADIUS_CONTROL))
                             .flex()
                             .items_center()
-                            .cursor(if pending {
+                            .text_color(if can_close { p.text } else { p.muted })
+                            .cursor(if !can_close {
                                 CursorStyle::Arrow
                             } else {
                                 CursorStyle::PointingHand
                             })
                             .child(self.tr("取消", "Cancel"))
-                            .when(!pending || self.add_flow.adoption_cancel.is_some(), |button| {
+                            .when(can_close, |button| {
                                 button
                                     .hover(move |button| button.bg(p.hover))
                                     .on_mouse_down(
