@@ -40,8 +40,8 @@ jobs:
         run: just release
       - name: Verify binary architectures
         run: |
-          lipo -verify_arch "$KITTER_ARCH" target/release/Kitter.app/Contents/MacOS/Kitter
-          lipo -verify_arch "$KITTER_ARCH" target/release/kitter
+          lipo target/release/Kitter.app/Contents/MacOS/Kitter -verify_arch "$KITTER_ARCH"
+          lipo target/release/kitter -verify_arch "$KITTER_ARCH"
           target/release/kitter --help
       - name: Package standalone CLI
         shell: bash
